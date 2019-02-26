@@ -1,6 +1,17 @@
 //##################
 //REGION: ODOMETRIYA
 //##################
+/*
+Usage:
+
+Add 'Update' method inside a loop. while(true), for example.
+Also, you have to call 'Reset' method when you're making a reset of the encoders
+You can change 'deltat' to the loop delay value. For example: 
+
+	while(true) { odometriya.Update(); script.wait(10); }
+	> Change deltat to 10
+
+*/
 //This code requiers:
 //eLeft, eRight, pi, cpr, d, l
 var odometriya = {}
