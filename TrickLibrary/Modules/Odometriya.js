@@ -22,6 +22,8 @@ odometriya.lasttime = Date.now()
 odometriya.Reset = function() {
 	this.lastrawleft = 0
 	this.lastrawright = 0
+	eLeft.reset();
+	eRight.reset();
 	this.lasttime = Date.now()
 }
 
@@ -43,17 +45,13 @@ odometriya.Update = function() {
 	vleft = pi * d * (deltaleft / cpr) / deltat;
 	vright = pi * d * (deltaright / cpr) / deltat;
 
-	v = (vright + vleft) / 2;
+	v = (vleft + vright) / 2;
 	w = (vright - vleft) / l;
 	
 	deltateta = w * deltat;
 	this.x += Math.cos((2 * this.teta + deltateta) / 2) * v * deltat;
 	this.y += Math.sin((2 * this.teta + deltateta) / 2) * v * deltat;
 	this.teta += deltateta;
-	this.teta = this.teta % (2 * pi);
-	if (this.teta < 0) {
-		this.teta = 2 * pi - this.teta;
-	}
 	
 	//print("x: " + this.x); //<<<<<<< DEBUG TUUUT <<<<<<<<
 	//print("y: " + this.y);
