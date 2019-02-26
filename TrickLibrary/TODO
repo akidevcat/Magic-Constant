@@ -1,4 +1,8 @@
 1)Check workability of getPhoto() in TrickLibrary/Modules/ARTag.js in get_artag_code()
 2)Add shtrix code
-3)Write a realization of the Bellman-Ford algorithm
-4)watch anime
+3)Write a realization of the Bellman-Ford algorithm (under the question)
+4)Update Lib -> (Movementlib)
+5)Movementlib - add left-hand and right-hand movement (without 'kostyly')
+6)Make the variables' names the same ('l' and 'base', for example)
+7)Survive
+8)watch anime
