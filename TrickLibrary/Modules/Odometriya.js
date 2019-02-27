@@ -5,13 +5,13 @@
 Usage:
 Add 'Start' method when initializing.
 Also, you have to call 'Reset' method when you're making a reset of the encoders
-Or 'ResetRight' and 'ResetRight' instead of 'eRight.reset' and 'eLeft.reset'
+Or 'ResetRight' and 'ResetLeft' instead of 'eRight.reset' and 'eLeft.reset'
 You can change 'deltat' according to the loop delay value. For example: 
 	while(true) { odometriya.Update(); script.wait(10); }
 	> Change deltat to 10
 */
 //This code requiers:
-//+ eLeft, eRight, pi, cpr, d, l, length(of cell, in pomoika studio is 69)
+//+ eLeft, eRight, pi, cpr, d, l
 var odometriya = {}
 
 //These variables are based on the given task
