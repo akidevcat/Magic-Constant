@@ -3,14 +3,11 @@
 //##################
 /*
 Usage:
-
 Add 'Update' method inside a loop. while(true), for example.
 Also, you have to call 'Reset' method when you're making a reset of the encoders
 You can change 'deltat' to the loop delay value. For example: 
-
 	while(true) { odometriya.Update(); script.wait(10); }
 	> Change deltat to 10
-
 */
 //This code requiers:
 //+ eLeft, eRight, pi, cpr, d, l
@@ -31,6 +28,20 @@ odometriya.lastrawleft = 0
 odometriya.lastrawright = 0
 odometriya.lasttime = Date.now()
 
+odometriya.ResetLeft = function() {
+	this.lastrawleft = 0
+	this.lastrawright = eRight.read();
+	eLeft.reset();
+	this.lasttime = Date.now()
+}
+
+odometriya.ResetRight = function() {
+	this.lastrawright = 0
+	this.lastrawleft = eLeft.read();
+	eRight.reset();
+	this.lasttime = Date.now()
+}
+
 odometriya.Reset = function() {
 	this.lastrawleft = 0
 	this.lastrawright = 0
@@ -40,39 +51,47 @@ odometriya.Reset = function() {
 }
 
 odometriya.Update = function() {
-	deltat = (Date.now() - this.lasttime) / 1000;
-	if (deltat == 0) {
+	lvar = {}
+	lvar.deltat = (Date.now() - this.lasttime) / 1000;
+	
+	if (lvar.deltat == 0) {
 		return;
 	}
 	if (this.deltat > 0) {
-		deltat = this.deltat;
+		lvar.deltat = this.deltat;
 	}
 	
-	rawleft = eLeft.readRawData();
-	rawright = eRight.readRawData();
+	lvar.rawleft = eLeft.readRawData();
+	lvar.rawright = eRight.readRawData();
 	
-	deltaleft = rawleft - this.lastrawleft;
-	deltaright = rawright - this.lastrawright;
+	lvar.deltaleft = lvar.rawleft - this.lastrawleft;
+	lvar.deltaright = lvar.rawright - this.lastrawright;
 	
-	vleft = pi * d * (deltaleft / cpr) / deltat;
-	vright = pi * d * (deltaright / cpr) / deltat;
+	lvar.vleft = pi * d * (lvar.deltaleft / cpr) / lvar.deltat;
+	lvar.vright = pi * d * (lvar.deltaright / cpr) / lvar.deltat;
 
-	v = (vleft + vright) / 2;
-	w = (vright - vleft) / l;
+	lvar.v = (lvar.vleft + lvar.vright) / 2;
+	lvar.w = (lvar.vright - lvar.vleft) / l;
 	
-	deltateta = w * deltat;
-	this.x += Math.cos((2 * this.teta + deltateta) / 2) * v * deltat;
-	this.y += Math.sin((2 * this.teta + deltateta) / 2) * v * deltat;
-	this.distance += Math.abs(v * deltat);
-	this.teta += deltateta;
+	lvar.deltateta = lvar.w * lvar.deltat;
+	this.x += Math.cos((2 * this.teta + lvar.deltateta) / 2) * lvar.v * lvar.deltat;
+	this.y += Math.sin((2 * this.teta + lvar.deltateta) / 2) * lvar.v * lvar.deltat;
+	this.distance += Math.abs(lvar.v * lvar.deltat);
+	this.teta += lvar.deltateta;
 	
 	//print("x: " + this.x); //<<<<<<< DEBUG TUUUT <<<<<<<<
-	//print("y: " + this.y);
+	print("y: " + this.y);
 	//print("teta: " + this.teta);
 	
-	this.lastrawleft = rawleft;
-	this.lastrawright = rawright;
+	this.lastrawleft = lvar.rawleft;
+	this.lastrawright = lvar.rawright;
 	this.lasttime = Date.now();
+}
+
+odometriya.Start = function() {
+	lvar = {}
+	lvar.updateTimer = script.timer(100);
+	lvar.updateTimer.timeout.connect(odometriya.Update);
 }
 //##################
 //REGION END
