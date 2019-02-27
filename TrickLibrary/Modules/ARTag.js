@@ -472,7 +472,7 @@ var artag = function()
 
 	this.get_code = function()
 	{	
-		var temp_pic = script.readAll("0.txt").toString().split(","); // TODO: check workability of getPhoto()
+		var temp_pic = brick.getPhoto().toString().split(","); // TODO: check workability of getPhoto()
 		
 		for(var h = 0; h < height; ++h)
 		{

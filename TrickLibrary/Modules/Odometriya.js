@@ -11,7 +11,7 @@ You can change 'deltat' according to the loop delay value. For example:
 	> Change deltat to 10
 */
 //This code requiers:
-//+ eLeft, eRight, pi, cpr, d, l
+//+ eLeft, eRight, pi, cpr, d, l, length(of cell, in pomoika studio is 69)
 var odometriya = {}
 
 //These variables are based on the given task
@@ -85,6 +85,9 @@ odometriya.Update = function() {
 	//print("y: " + odometriya.y);
 	//print("teta: " + odometriya.teta);
 	//print("distance: " + odometriya.distance);
+	//print("x_cell: " + Math.round(odometriya.x / length));
+	//print("y_cell: " + Math.round(odometriya.y / length));
+	//print("distance_cell: " + Math.round(odometriya.distance / length));
 	
 	odometriya.lastrawleft = lvar.rawleft;
 	odometriya.lastrawright = lvar.rawright;
