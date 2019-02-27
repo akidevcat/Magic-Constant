@@ -22,6 +22,7 @@ odometriya.teta = 0 //90* = pi / 2; 180* = pi; 270* = 1.5 * pi; 360* = 2 * pi
 //This is the delay between iterations inside the main loop (<Your MS Delay> / 1000)
 //If this value is 0 then it'll be calculated automatically (!but less accurate!)
 odometriya.deltat = 0 / 1000
+odometriya.updatedelay = 4
 
 //These are the local ones (don't edit them):
 odometriya.lastrawleft = 0
@@ -29,43 +30,43 @@ odometriya.lastrawright = 0
 odometriya.lasttime = Date.now()
 
 odometriya.ResetLeft = function() {
-	this.lastrawleft = 0
-	this.lastrawright = eRight.read();
+	odometriya.lastrawleft = 0
+	odometriya.lastrawright = eRight.read();
 	eLeft.reset();
-	this.lasttime = Date.now()
+	odometriya.lasttime = Date.now()
 }
 
 odometriya.ResetRight = function() {
-	this.lastrawright = 0
-	this.lastrawleft = eLeft.read();
+	odometriya.lastrawright = 0
+	odometriya.lastrawleft = eLeft.read();
 	eRight.reset();
-	this.lasttime = Date.now()
+	odometriya.lasttime = Date.now()
 }
 
 odometriya.Reset = function() {
-	this.lastrawleft = 0
-	this.lastrawright = 0
+	odometriya.lastrawleft = 0
+	odometriya.lastrawright = 0
 	eLeft.reset();
 	eRight.reset();
-	this.lasttime = Date.now()
+	odometriya.lasttime = Date.now()
 }
 
 odometriya.Update = function() {
-	lvar = {}
-	lvar.deltat = (Date.now() - this.lasttime) / 1000;
-	
+	var lvar = {}
+	lvar.deltat = (Date.now() - odometriya.lasttime) / 1000;
+
 	if (lvar.deltat == 0) {
 		return;
 	}
-	if (this.deltat > 0) {
-		lvar.deltat = this.deltat;
+	if (odometriya.deltat > 0) {
+		lvar.deltat = odometriya.deltat;
 	}
 	
 	lvar.rawleft = eLeft.readRawData();
 	lvar.rawright = eRight.readRawData();
 	
-	lvar.deltaleft = lvar.rawleft - this.lastrawleft;
-	lvar.deltaright = lvar.rawright - this.lastrawright;
+	lvar.deltaleft = lvar.rawleft - odometriya.lastrawleft;
+	lvar.deltaright = lvar.rawright - odometriya.lastrawright;
 	
 	lvar.vleft = pi * d * (lvar.deltaleft / cpr) / lvar.deltat;
 	lvar.vright = pi * d * (lvar.deltaright / cpr) / lvar.deltat;
@@ -74,23 +75,24 @@ odometriya.Update = function() {
 	lvar.w = (lvar.vright - lvar.vleft) / l;
 	
 	lvar.deltateta = lvar.w * lvar.deltat;
-	this.x += Math.cos((2 * this.teta + lvar.deltateta) / 2) * lvar.v * lvar.deltat;
-	this.y += Math.sin((2 * this.teta + lvar.deltateta) / 2) * lvar.v * lvar.deltat;
-	this.distance += Math.abs(lvar.v * lvar.deltat);
-	this.teta += lvar.deltateta;
+	odometriya.x += Math.cos(odometriya.teta) * lvar.v * lvar.deltat;
+	odometriya.y += Math.sin(odometriya.teta) * lvar.v * lvar.deltat;
+	odometriya.distance += Math.abs(lvar.v * lvar.deltat);
+	odometriya.teta += lvar.deltateta;
 	
-	//print("x: " + this.x); //<<<<<<< DEBUG TUUUT <<<<<<<<
-	print("y: " + this.y);
-	//print("teta: " + this.teta);
+	//print("x: " + odometriya.x); //<<<<<<< DEBUG TUUUT <<<<<<<<
+	//print("y: " + odometriya.y);
+	//print("teta: " + odometriya.teta);
+	//print("distance: " + odometriya.distance);
 	
-	this.lastrawleft = lvar.rawleft;
-	this.lastrawright = lvar.rawright;
-	this.lasttime = Date.now();
+	odometriya.lastrawleft = lvar.rawleft;
+	odometriya.lastrawright = lvar.rawright;
+	odometriya.lasttime = Date.now();
 }
 
 odometriya.Start = function() {
-	lvar = {}
-	lvar.updateTimer = script.timer(100);
+	var lvar = {}
+	lvar.updateTimer = script.timer(odometriya.updatedelay);
 	lvar.updateTimer.timeout.connect(odometriya.Update);
 }
 //##################
