@@ -3,9 +3,10 @@
 //##################
 /*
 Usage:
-Add 'Update' method inside a loop. while(true), for example.
+Add 'Start' method when initializing.
 Also, you have to call 'Reset' method when you're making a reset of the encoders
-You can change 'deltat' to the loop delay value. For example: 
+Or 'ResetRight' and 'ResetRight' instead of 'eRight.reset' and 'eLeft.reset'
+You can change 'deltat' according to the loop delay value. For example: 
 	while(true) { odometriya.Update(); script.wait(10); }
 	> Change deltat to 10
 */
