@@ -3,13 +3,19 @@
 //##################
 //This code requiers:
 //-
+/*
+Usage:
+1) Create the maze matrix
+2) Set trikTaxi.walls
+3) Use A* (or something else but dunno why)
+*/
 var trikTaxi = {}
 
 //Write walls here (between which cells walls are). PUT THEM IN ASCENDING ORDER! (x, y) where x < y
 trikTaxi.walls = ["2, 3", "6, 7", "3, 11", "4, 12", "12, 13", "29, 37", "36, 37", "51, 59"]
 
 trikTaxi.getPos = function (cell, xsize, ysize) {
-    return [cell % xsize, cell / xsize]
+    return [cell % xsize, Math.floor(cell/ysize)]
 }
 
 trikTaxi.getEuclideanDistance = function (cell1, cell2, xsize, ysize) {
