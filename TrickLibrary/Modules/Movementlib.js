@@ -10,7 +10,7 @@ var movementlib = {}
 movementlib.cellsize = 69
 movementlib.kp = 2.5
 movementlib.kd = 0.1
-movementlib.correctiondelay = 1
+movementlib.correctiondelay = 10
 
 /*
 Angle - rad
@@ -54,6 +54,7 @@ movementlib.move_encoders = function(speed, distance) {
 
 /*
 If distance is zero - moving until the end
+(Actually, it doesn't work with distance given UwU
 */
 movementlib.move_correction = function(speed, distance, sLeft, sFront) {
 	var lvar = {}
