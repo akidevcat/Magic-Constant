@@ -1,16 +1,14 @@
 // Robot's settings
 var pi = 3.141592653589793;
 var d = 5.6 // wheels' diameter, cm
-var base = 17.5 // Robot's base, cm
-var xRobot = 0 // Robot's x coord
-var yRobot = 0 // Robot's y coord
+var l = 17.5 // Robot's base, cm
 var degInRad = 180 / pi;
 var cmtodeg = (pi*56)/3600;
 
 // Motors
 var mLeft = brick.motor(M4).setPower; // Default left motor in 2D simulator
 var mRight = brick.motor(M3).setPower; // Default right motor in 2D simulator
-var cpr = 360 // Encoder's count per round of wheel
+var cpr = 360 // Encoder's count per round of wheel //372 mb
 var cprToDeg = 360/cpr;
 
 // Encoders
@@ -34,32 +32,9 @@ eRight.reset();
 var cellLength = 52.5 * cpr / (pi * d);
 var length = 69;
 
-// Distance counters
-//var svFront = brick.sensor(A1).read;
-//var svLeft = brick.sensor(A2).read;
-//var svRight = brick.sensor(A2).read;
-
-var sLeft = 0;
-var sFront = 0;
-
-var direction = 0; // Robot's direction in the world
-var azimut = 0; // azimuth
-
-
-var kp = 3; // proportionality movement coefficient
-var kd = 1; // coefficient...
-var u = 0; // dunno
-var err = 0;// dunno
-var err_old = 0;//dunno
-
-var v = 15; // current velocity that is being given on motors
-var dist = 36; // distance
-
-
 //Gyroscope settings
 var timeCalibrateRealRobot = 10000;
 var timeCalibrate2DRobot = 2000;
-var gyro = brick.gyroscope();
 // угловая скорость по x
 //brick.gyroscope().read()[0]; 
 // угловая скорость по y
@@ -74,379 +49,698 @@ var gyro = brick.gyroscope();
 // угол крена в миллиградусах −90 000 до 90 000
 //var ay = brick.gyroscope().read()[5];
 
-//Прямолинейное движение с энкодерами
 
 
-//RB's code :C
-function forward_kp()
+/*
+	How to use:
+	    var artag_obj = new artag();
+	    var code = artag_obj.get_code();
+*/
+var artag = function()
 {
-	sFront = svFront.read();
-	eLeft.reset();
-	eRight.reset();
-	while (sFront > dist_threshold)
+	var pic = [];
+	var vertexes = {};
+	var main_edges = [];
+	var auxiliary_vertexes = {};
+	var center;
+	var result_matrix = [[], [], [], []];
+	var squares = [[], [], [], []];
+
+	var height = 120;
+	var height_u = 116; // area of interest
+	var width = 160;
+	var width_u = 156; // area of interest
+
+
+
+	function coords(x, y) // alternative of pair in c++
 	{
-		sLeft = svLeft.read();
-		err = sLeft - dist_threshold;
-		u = err * kp;		
-		mLeft(v - u);
-		mRight(v + u);		
-		sFront = svFront.read();
-		script.wait(10);
+		this.x = x;
+		this.y = y;
+	}
+
+	function line(xf, yf, xs, ys) // int
+	{
+	    this.x1 = xf;
+	    this.y1 = yf;
+	    this.x2 = xs;
+	    this.y2 = ys;
+	    this.length = Math.sqrt(Math.pow(this.x2 - this.x1, 2) + Math.pow(this.y2 - this.y1, 2));
+	    this.k = (this.y2 - this.y1) / (this.x2 - this.x1);
+	    this.b = this.y1 - this.k * this.x1;
+	    
+	    this.calculate_y = function calculate_y(x) // int x
+	    {
+		return this.k * x + this.b;
+	    }
+
+	    this.get_point_on_line = function get_point_on_line(len) // double len
+	    {
+		var result = new coords();
+		result.x = (len * (this.x2 - this.x1)) / this.length + this.x1;
+		result.y = (len * (this.y2 - this.y1)) / this.length + this.y1;
+		//print("len = ", len, "\n", "x2 = ", this.x2, "\n", "x1 = ", this.x1, "\n", "length = ", this.length, "\n",
+		//   "res = ", (len * (this.x2 - this.x1)) / this.length + this.x1, "\n\n");
 		
-	}	
-	mLeft(0);
-	mRight(0);
+		return result; // coords(x, y)
+	    }
 
-}
+	    this.get_intersection_point = function get_intersection_point(l) // with line l
+	    {
+		var result = new coords();
+		result.x = (l.b - this.b) / (this.k - l.k);
+		result.y = this.k * result.x + this.b;
 
-//RB's code :C
-function rotate(angle)
-{
-	eLeft.reset();
-	eRight.reset();
-	left = 0;
-	right = 0;	
-	if (angle == 90) // turn right
+		return  result; // coords(x, y)
+	    }
+	}
+
+	function compareNumbers(a, b) { // comparator for ascending sorting of numbers
+		return a - b;
+	}
+
+
+	//DEBUG FUNCTIONS
+
+
+	function print_matrix(m)
 	{
-		while ((left + Math.abs(right))/2 < (pi * l / 4) / (pi * d) * cpr)
+		var le = m.length;
+		for(var i = 0; i < le; ++i)
 		{
-			mLeft(100);
-			mRight(-100);
-			left = eLeft.readRawData();
-			right = eRight.readRawData();
-			script.wait(10);
+			print(m[i]);
 		}
 	}
-	else
+
+	function matrix_to_file(m)
 	{
-		while ((Math.abs(left) + right)/2 < (pi * l / 4) / (pi * d) * cpr)
+		var s = "";
+		for(var i = 0; i < height; ++i)
 		{
-			mLeft(-100);
-			mRight(100);
-			left = eLeft.readRawData();
-			right = eRight.readRawData();
-			script.wait(10);
+			for(var j = 0; j < width; ++j)
+			{
+				s += m[i][j].toString();
+			}
+			s += "\n";
 		}
-	}	
-	mLeft(0);
-	mRight(0);	
+		script.writeToFile("matrix.txt", s);
+	}
+
+
+	//END DEBUG FUNCTIONS
+
+
+	var max = function(a, b, c) // max for 3 nums
+	{
+		var m = a;
+		if(b > m)
+		{
+			m = b;
+		}
+		if(c > m)
+		{
+			m = c;
+		}
+		return m;
+	}
+
+	var get_r = function(rgb)
+	{
+		return (rgb&16711680) >> 16;
+	}
+	var get_g = function(rgb)
+	{
+		return (rgb&65280) >> 8;
+	}
+	var get_b = function(rgb)
+	{
+		return (rgb&255);
+	}
+
+	var get_median_value = function(h_mid, w_mid, color) // in square 3x3
+	{
+		var getter;
+		var temp_list = [];
+		switch(color)
+		{
+			case 'r':
+				getter = get_r;
+			case 'g':
+				getter = get_g;
+			case 'b':
+				getter = get_b;
+		}
+		
+		for(var h = h_mid - 1; h <= h_mid + 1; ++h)
+		{
+			for(var w = w_mid - 1; w <= w_mid + 1; ++w)
+			{
+				temp_list.push(getter(pic[h][w]));
+			}
+		}
+		
+		temp_list.sort(compareNumbers);
+		return temp_list[4];
+	}
+
+	var rgb_to_bool = function(rgb)
+	{		
+		var r = get_r(rgb);
+		var g = get_g(rgb);
+		var b = get_b(rgb);
+		
+		var v = max(r, g, b); // the magic way for solution
+		var threshold_grey = 255 / 6; // it's too
+		
+		if(v < threshold_grey)
+		{
+			return 1; // dark
+		}
+		else
+		{
+			return 0; // light
+		}
+	}
+
+	var rgb_to_num = function(r, g, b) // merge channels to decimal number
+	{
+		return r * 256 * 256 + g * 256 + b;
+	}
+
+	var picture_processing = function() // var pic after that looks like 1-0 matrix
+	{
+		
+		for(var h = 1; h < height - 1; ++h)
+		{
+			for(var w = 1; w < width - 1; ++w)
+			{
+				var r = get_median_value(h, w, 'r');
+				var g = get_median_value(h, w, 'g');
+				var b = get_median_value(h, w, 'b');
+				var num = rgb_to_num(r, g, b);
+				pic[h][w] = num;
+			}
+		}
+		
+		for(var h = 0; h < height; ++h)
+		{
+			for(var w = 0; w < width; ++w)
+			{
+				pic[h][w] = rgb_to_bool(pic[h][w]);
+			}
+		}
+	}
+
+	function alternative_search_of_vertexes()
+	{
+		var goto_flag = 0;
+		
+		// 1
+		
+		for(var i = 4; i < width_u; ++i)
+		{
+			for(var x = i, y = 4; x >= 4 && y < height_u; --x, ++y)
+			{
+				if(pic[y][x] == 1)
+				{
+					vertexes["x1"] = x;
+					vertexes["y1"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		
+		//2
+		
+		goto_flag = 0;
+		
+		for(var i = width_u - 1; i >= 4; --i)
+		{
+			for(var x = i, y = 4; x < width_u && y < height_u; ++x, ++y)
+			{
+				if(pic[y][x] == 1)
+				{
+					vertexes["x2"] = x;
+					vertexes["y2"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		
+		//3
+		
+		goto_flag = 0;
+		
+		for(var i = width_u - 1; i >= 4; --i)
+		{
+			for(var x = i, y = height_u - 1; x < width_u && y >= 4; ++x, --y)
+			{
+				if(pic[y][x] == 1)
+				{
+					vertexes["x3"] = x;
+					vertexes["y3"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		
+		//4
+		
+		goto_flag = 0;
+		
+		for(var i = 4; i < width_u; ++i)
+		{
+			for(var x = i, y = height_u - 1; x >= 4 && y >= 4; --x, --y)
+			{
+				if(pic[y][x] == 1)
+				{
+					vertexes["x4"] = x;
+					vertexes["y4"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		
+		return;
+	}
+
+	function find_all_coords() // shit
+	{
+		main_edges.push(new line(vertexes["x1"], vertexes["y1"], vertexes["x2"], vertexes["y2"]));
+		main_edges.push(new line(vertexes["x2"], vertexes["y2"], vertexes["x3"], vertexes["y3"]));
+		main_edges.push(new line(vertexes["x3"], vertexes["y3"], vertexes["x4"], vertexes["y4"]));	
+		main_edges.push(new line(vertexes["x4"], vertexes["y4"], vertexes["x1"], vertexes["y1"]));
+		
+		var first_diag = new line(vertexes["x1"], vertexes["y1"], vertexes["x3"], vertexes["y3"]);
+		var second_diag = new line(vertexes["x2"], vertexes["y2"], vertexes["x4"], vertexes["y4"]);
+		
+		center = first_diag.get_intersection_point(second_diag); // x, y
+		
+		auxiliary_vertexes["xy1"] = main_edges[0].get_point_on_line(Math.round(main_edges[0].length / 2));
+		auxiliary_vertexes["xy2"] = main_edges[1].get_point_on_line(Math.round(main_edges[1].length / 2));
+		auxiliary_vertexes["xy3"] = main_edges[2].get_point_on_line(Math.round(main_edges[2].length / 2));
+		auxiliary_vertexes["xy4"] = main_edges[3].get_point_on_line(Math.round(main_edges[3].length / 2));
+		return;
+	}
+
+	function add_first_square_to_matrix() // also shit
+	{
+		var first = new line(vertexes["x1"], vertexes["y1"], auxiliary_vertexes["xy1"].x, auxiliary_vertexes["xy1"].y);
+		var second = new line(auxiliary_vertexes["xy1"].x, auxiliary_vertexes["xy1"].y, center.x, center.y);
+		var third = new line(center.x, center.y, auxiliary_vertexes["xy4"].x, auxiliary_vertexes["xy4"].y);
+		var fourth = new line(auxiliary_vertexes["xy4"].x, auxiliary_vertexes["xy4"].y, vertexes["x1"], vertexes["y1"]);
+		
+		var first_diag = new line(vertexes["x1"], vertexes["y1"], center.x, center.y);
+		var second_diag = new line(auxiliary_vertexes["xy1"].x, auxiliary_vertexes["xy1"].y,
+					auxiliary_vertexes["xy4"].x, auxiliary_vertexes["xy4"].y);
+		
+		var temp_center = first_diag.get_intersection_point(second_diag); // 1
+		squares[0][0] = temp_center;
+		
+		var temp_something = second.get_point_on_line(second.length / 2); // fuck my imagination
+		var temp_line = new line(temp_something.x, temp_something.y, temp_center.x, temp_center.y);
+		squares[0][1] = temp_line.get_point_on_line(temp_line.length / 3); // 2
+		
+		temp_line = new line(center.x, center.y, temp_center.x, temp_center.y);
+		squares[1][1] = temp_line.get_point_on_line(temp_line.length / 3); // 6
+		
+		temp_something = third.get_point_on_line(third.length / 2);
+		temp_line = new line(temp_something.x, temp_something.y, temp_center.x, temp_center.y);
+		squares[1][0] = temp_line.get_point_on_line(temp_line.length / 3); // 5
+	}
+
+	function add_second_square_to_matrix() // also shit
+	{
+		var first = new line(auxiliary_vertexes["xy1"].x, auxiliary_vertexes["xy1"].y, vertexes["x2"], vertexes["y2"]);
+		var second = new line(vertexes["x2"], vertexes["y2"], auxiliary_vertexes["xy2"].x, auxiliary_vertexes["xy2"].y);
+		var third = new line(auxiliary_vertexes["xy2"].x, auxiliary_vertexes["xy2"].y, center.x, center.y);
+		var fourth = new line(center.x, center.y, auxiliary_vertexes["xy1"].x, auxiliary_vertexes["xy1"].y);
+		
+		var first_diag = new line(auxiliary_vertexes["xy1"].x, auxiliary_vertexes["xy1"].y,
+					auxiliary_vertexes["xy2"].x, auxiliary_vertexes["xy2"].y);
+		var second_diag = new line(vertexes["x2"], vertexes["y2"], center.x, center.y);
+		
+		var temp_center = first_diag.get_intersection_point(second_diag); // 4
+		squares[0][3] = temp_center;
+		
+		var temp_something = fourth.get_point_on_line(fourth.length / 2); // fuck my imagination
+		var temp_line = new line(temp_something.x, temp_something.y, temp_center.x, temp_center.y);
+		squares[0][2] = temp_line.get_point_on_line(temp_line.length / 3); // 3
+		
+		temp_line = new line(center.x, center.y, temp_center.x, temp_center.y);
+		squares[1][2] = temp_line.get_point_on_line(temp_line.length / 3); // 7
+		
+		temp_something = third.get_point_on_line(third.length / 2);
+		temp_line = new line(temp_something.x, temp_something.y, temp_center.x, temp_center.y);
+		squares[1][3] = temp_line.get_point_on_line(temp_line.length / 3); // 8
+	}
+
+	function add_third_square_to_matrix() // also shit
+	{
+		var first = new line(auxiliary_vertexes["xy4"].x, auxiliary_vertexes["xy4"].y, center.x, center.y);
+		var second = new line(center.x, center.y, auxiliary_vertexes["xy3"].x, auxiliary_vertexes["xy3"].y);
+		var third = new line(auxiliary_vertexes["xy3"].x, auxiliary_vertexes["xy3"].y, vertexes["x4"], vertexes["y4"]);
+		var fourth = new line(vertexes["x4"], vertexes["y4"], auxiliary_vertexes["xy4"].x, auxiliary_vertexes["xy4"].y);
+		
+		var first_diag = new line(auxiliary_vertexes["xy4"].x, auxiliary_vertexes["xy4"].y,
+					auxiliary_vertexes["xy3"].x, auxiliary_vertexes["xy3"].y);
+		var second_diag = new line(center.x, center.y, vertexes["x4"], vertexes["y4"]);
+		
+		var temp_center = first_diag.get_intersection_point(second_diag); // 13
+		squares[3][0] = temp_center;
+		
+		var temp_something = first.get_point_on_line(first.length / 2); // fuck my imagination
+		var temp_line = new line(temp_something.x, temp_something.y, temp_center.x, temp_center.y);
+		squares[2][0] = temp_line.get_point_on_line(temp_line.length / 3); // 9
+		
+		temp_line = new line(center.x, center.y, temp_center.x, temp_center.y);
+		squares[2][1] = temp_line.get_point_on_line(temp_line.length / 3); // 10
+		
+		temp_something = second.get_point_on_line(second.length / 2);
+		temp_line = new line(temp_something.x, temp_something.y, temp_center.x, temp_center.y);
+		squares[3][1] = temp_line.get_point_on_line(temp_line.length / 3); // 14
+	}
+
+	function add_fourth_square_to_matrix() // also shit
+	{
+		var first = new line(center.x, center.y, auxiliary_vertexes["xy2"].x, auxiliary_vertexes["xy2"].y);
+		var second = new line(auxiliary_vertexes["xy2"].x, auxiliary_vertexes["xy2"].y, vertexes["x3"], vertexes["y3"]);
+		var third = new line(vertexes["x3"], vertexes["y3"], auxiliary_vertexes["xy3"].x, auxiliary_vertexes["xy3"].y);
+		var fourth = new line(auxiliary_vertexes["xy3"].x, auxiliary_vertexes["xy3"].y, center.x, center.y);
+		
+		var first_diag = new line(center.x, center.y, vertexes["x3"], vertexes["y3"]);
+		var second_diag = new line(auxiliary_vertexes["xy2"].x, auxiliary_vertexes["xy2"].y,
+					auxiliary_vertexes["xy3"].x, auxiliary_vertexes["xy3"].y);
+		
+		var temp_center = first_diag.get_intersection_point(second_diag); // 16
+		squares[3][3] = temp_center;
+		
+		var temp_something = first.get_point_on_line(first.length / 2); // fuck my imagination
+		var temp_line = new line(temp_something.x, temp_something.y, temp_center.x, temp_center.y);
+		squares[2][3] = temp_line.get_point_on_line(temp_line.length / 3); // 12
+		
+		temp_line = new line(center.x, center.y, temp_center.x, temp_center.y);
+		squares[2][2] = temp_line.get_point_on_line(temp_line.length / 3); // 11
+		
+		temp_something = fourth.get_point_on_line(fourth.length / 2);
+		temp_line = new line(temp_something.x, temp_something.y, temp_center.x, temp_center.y);
+		squares[3][2] = temp_line.get_point_on_line(temp_line.length / 3); // 15
+	}
+
+	function matrix_coords_to_bool() // for known coords we're create result artag matrix
+	{
+		var now_x;
+		var now_y;
+		for(var i = 0; i < 4; ++i)
+		{
+			for(var j = 0; j < 4; ++j)
+			{
+				now_x = Math.round(squares[i][j].x);
+				now_y = Math.round(squares[i][j].y);
+				result_matrix[i][j] =  pic[now_y][now_x];
+			}
+		}
+		
+		return;
+	}
+
+	function artag_decode()
+	{
+		var n, x, y;
+		if(result_matrix[0][0] == 0)
+		{
+			n = result_matrix[2][3] * 2 + result_matrix[2][1];
+			x = result_matrix[2][0] * 4 + result_matrix[1][3] * 2 + result_matrix[1][1];
+			y = result_matrix[1][0] * 4 + result_matrix[0][2] * 2 + result_matrix[0][1];
+		}
+		else if(result_matrix[0][3] == 0)
+		{
+			n = result_matrix[3][1] * 2 + result_matrix[1][1];
+			x = result_matrix[0][1] * 4 + result_matrix[3][2] * 2 + result_matrix[1][2];
+			y = result_matrix[0][2] * 4 + result_matrix[2][3] * 2 + result_matrix[1][3];
+		}
+		else if(result_matrix[3][0] == 0)
+		{
+			n = result_matrix[0][2] * 2 + result_matrix[2][2];
+			x = result_matrix[3][2] * 4 + result_matrix[0][1] * 2 + result_matrix[2][1];
+			y = result_matrix[3][1] * 4 + result_matrix[1][0] * 2 + result_matrix[2][0];
+		}
+		else if(result_matrix[3][3] == 0)
+		{
+			n = result_matrix[1][0] * 2 + result_matrix[1][2];
+			x = result_matrix[1][3] * 4 + result_matrix[2][0] * 2 + result_matrix[2][2];
+			y = result_matrix[2][3] * 4 + result_matrix[3][1] * 2 + result_matrix[3][2];
+		}
+		return [x, y, n];
+	}
+
+	this.get_code = function()
+	{	
+		var temp_pic = brick.getPhoto().toString().split(","); // TODO: check workability of getPhoto()
+		
+		for(var h = 0; h < height; ++h)
+		{
+			pic[h] = [];
+			for(var w = 0; w < width; ++w)
+			{
+				pic[h][w] = parseInt(temp_pic[h * width + w], 10);
+			}
+		}	
+		picture_processing();
+		alternative_search_of_vertexes();
+		find_all_coords();
+		
+		add_first_square_to_matrix();
+		add_second_square_to_matrix();
+		add_third_square_to_matrix();
+		add_fourth_square_to_matrix();
+		
+		matrix_coords_to_bool();
+		
+		var res_numbers = artag_decode(); // [x, y, n]
+		
+		return res_numbers; // [x, y, n]
+	}
 }
 
-//RB's code :C
-function forward_enc(length)
-{
+
+
+/*
+Usage:
+Add 'Start' method when initializing.
+Also, you have to call 'Reset' method when you're making a reset of the encoders
+Or 'ResetRight' and 'ResetLeft' instead of 'eRight.reset' and 'eLeft.reset'
+You can change 'deltat' according to the loop delay value. For example: 
+	while(true) { odometriya.Update(); script.wait(10); }
+	> Change deltat to 10
+*/
+//This code requiers:
+//+ eLeft, eRight, pi, cpr, d, l
+
+var odometriya = {}
+
+//These variables are based on the given task
+//If they're known then you should update them here:
+odometriya.x = 0
+odometriya.y = 0
+odometriya.distance = 0
+odometriya.teta = 0 //90* = pi / 2; 180* = pi; 270* = 1.5 * pi; 360* = 2 * pi
+//This is the delay between iterations inside the main loop (<Your MS Delay> / 1000)
+//If this value is 0 then it'll be calculated automatically (!but less accurate!)
+odometriya.deltat = 0 / 1000
+odometriya.updatedelay = 4
+
+//These are the local ones (don't edit them):
+odometriya.lastrawleft = 0
+odometriya.lastrawright = 0
+odometriya.lasttime = Date.now()
+
+odometriya.ResetLeft = function() {
+	odometriya.lastrawleft = 0
+	odometriya.lastrawright = eRight.read();
+	eLeft.reset();
+	odometriya.lasttime = Date.now()
+}
+
+odometriya.ResetRight = function() {
+	odometriya.lastrawright = 0
+	odometriya.lastrawleft = eLeft.read();
+	eRight.reset();
+	odometriya.lasttime = Date.now()
+}
+
+odometriya.Reset = function() {
+	odometriya.lastrawleft = 0
+	odometriya.lastrawright = 0
 	eLeft.reset();
 	eRight.reset();
-	left = eLeft.readRawData();
-	right = eRight.readRawData();
+	odometriya.lasttime = Date.now()
+}
+
+odometriya.Update = function() {
+	var lvar = {}
+	lvar.deltat = (Date.now() - odometriya.lasttime) / 1000;
+
+	if (lvar.deltat == 0) {
+		return;
+	}
+	if (odometriya.deltat > 0) {
+		lvar.deltat = odometriya.deltat;
+	}
 	
-	while ((left+right)/2 < (length * cpr) / (pi * d))
-	{
-		mLeft(100);
-		mRight(100);
-		left = eLeft.readRawData();
-		right = eRight.readRawData();
+	lvar.rawleft = eLeft.readRawData();
+	lvar.rawright = eRight.readRawData();
+	
+	lvar.deltaleft = lvar.rawleft - odometriya.lastrawleft;
+	lvar.deltaright = lvar.rawright - odometriya.lastrawright;
+	
+	lvar.vleft = pi * d * (lvar.deltaleft / cpr) / lvar.deltat;
+	lvar.vright = pi * d * (lvar.deltaright / cpr) / lvar.deltat;
+
+	lvar.v = (lvar.vleft + lvar.vright) / 2;
+	lvar.w = (lvar.vright - lvar.vleft) / l;
+	
+	lvar.deltateta = lvar.w * lvar.deltat;
+	odometriya.x += Math.cos(odometriya.teta) * lvar.v * lvar.deltat;
+	odometriya.y += Math.sin(odometriya.teta) * lvar.v * lvar.deltat;
+	odometriya.distance += Math.abs(lvar.v * lvar.deltat);
+	odometriya.teta += lvar.deltateta;
+	
+	//print("x: " + odometriya.x); //<<<<<<< DEBUG TUUUT <<<<<<<<
+	//print("y: " + odometriya.y);
+	//print("teta: " + odometriya.teta);
+	//print("distance: " + odometriya.distance);
+	//print("x_cell: " + Math.round(odometriya.x / length));
+	//print("y_cell: " + Math.round(odometriya.y / length));
+	//print("distance_cell: " + Math.round(odometriya.distance / length));
+	
+	odometriya.lastrawleft = lvar.rawleft;
+	odometriya.lastrawright = lvar.rawright;
+	odometriya.lasttime = Date.now();
+}
+
+odometriya.Start = function() {
+	var lvar = {}
+	lvar.updateTimer = script.timer(odometriya.updatedelay);
+	lvar.updateTimer.timeout.connect(odometriya.Update);
+}
+
+
+var movementlib = {}
+
+movementlib.cellsize = 69
+movementlib.kp = 2.5
+movementlib.kd = 0.1
+movementlib.correctiondelay = 1
+
+/*
+Angle - rad
+*/
+movementlib.rotate_encoders = function(speed, angle) {
+	var lvar = {}
+	lvar.initialAngle = odometriya.teta;
+	if (angle > 0) {
+		mLeft(-speed);
+		mRight(speed);
+	} else {
+		mLeft(speed);
+		mRight(-speed);
+	}
+	
+	while (true) {
+		if ((angle > 0 && (odometriya.teta - lvar.initialAngle) >= angle) || 
+			(angle < 0 && (odometriya.teta - lvar.initialAngle) <= angle)) { break; }
 		script.wait(1);
 	}
-	
 	mLeft(0);
-	mRight(0);	
+	mRight(0);
+	odometriya.Reset();
 }
 
-
-
 /*
-  ARGS:
-      vel - Power are being given to left motor
-	  len - Length computed to encoder units
-		Idea:
-			Power of right motor is recounting until
-			encoders values won't be same;		
+Distance - cm
 */
-function rightToLeftEncodersMovement (vel, len)
-{
-	eLeft.reset();
-	eRight.reset();
-	eLeftVal = 0;// Left encoder value
-	eRightVal = 0; // Right encoder value
-	mLeft(vel);
-	while (eLeftVal < len)
-	{
-		eLeftVal = eLeft.read();
-		eRightVal = eRight.read();
-		mRight((eLeftVal - eRightVal)*kp+vel);
-		script.wait(10);
+movementlib.move_encoders = function(speed, distance) {
+	var lvar = {}
+	lvar.initialDistance = odometriya.distance;
+	mLeft(speed);
+	mRight(speed);
+	while (odometriya.distance - lvar.initialDistance < distance) {
+		script.wait(1);
 	}
+	mLeft(0);
+	mRight(0);
+	odometriya.Reset();
 }
 
 /*
-  ARGS:
-      vel - Power are being given to right motor
-	  len - Length computed to encoder units
-		Idea:
-			Power of left motor is recounting until
-			encoders values won't be same;		
+If distance is zero - moving until the end
 */
-function leftToRightEncodersMovement (vel, len)
-{
-	eLeft.reset();
-	eRight.reset();
-	eLeftVal = 0;// Left encoder value
-	eRightVal = 0; // Right encoder value
-	mRight(vel);
-	while (eLeftVal < len)
-	{
-		eLeftVal = eLeft.read();
-		eRightVal = eRight.read();
-		mLeft((eRightVal - eLeftVal)*kp+vel);
-		script.wait(10);
+movementlib.move_correction = function(speed, distance, sLeft, sFront) {
+	var lvar = {}
+	lvar.perror = 0;
+	while (sFront.read() > movementlib.cellsize / 2 - l / 2) {
+		lvar.leftWallDistance = sLeft.read();
+		lvar.error = lvar.leftWallDistance - movementlib.cellsize / 2;
+		lvar.derative = (lvar.error - lvar.perror) / (movementlib.correctiondelay / 1000);
+		lvar.correction = lvar.error * movementlib.kp + lvar.derative * movementlib.kd;
+		mLeft(speed - lvar.correction);
+		mRight(speed + lvar.correction);
+		lvar.perror = lvar.error;
+		script.wait(movementlib.correctiondelay);
 	}
+	mLeft(0);
+	mRight(0);
 }
 
 /*
-  ARGS:
-       vel - Power are being given to both motors
-       len - Length computed to encoder units
-	Idea:
-	    Power of both motors is recounting until
-	    encoders values won't be same;
+One left-hand movement iteration. Just call it inside a loop.
+sLeft is the left sensor. sFront is the front sensor.
 */
-function wheelToWheelMovement (vel, len)
-{
-	eLeft.reset();
-	eRight.reset();
-	var eLeftVal = 0;
-	var eRightVal = 0;
-	while ( ((eLeftVal + eRightVal)/2) < len)
-	{
-		eLeftVal = eLeft.read();
-		eRightVal = eRight.read();
-		mLeft((eRightVal - eLeftVal)*kp + vel);
-		mRight((eLeftVal - eRightVal)*kp + vel);
-		script.wait(10);
-	}	
-}
-
-/*
-    ARGS:	
-        vel - Power are being given to both motors
-        len - Length computed to encoder units 
-        Idea(Pos(+) and Cons(-)):
-	      Both encoders synchronized with virtual wheel's counter
-	Pos - It gives us opportunity to move more smoothly with lower velocity
-		than previous movement functions but with some "jumps"
-	Cons - With bigger velocity motors can't reach virtual wheel's speed
-		and movement is gonna be shit 
-*/
-function VirtualWheelMovement (vel, len)
-{
-	eLeft.reset();
-	eRight.reset();
-	var eLeftVal = 0;
-	var eRightVal = 0;
-	var expected = 0;
-	while (expected < len)
-	{
-		expected+=vel;
-		eLeftVal = eLeft.read();
-		eRightVal = eRight.read();
-		mLeft((expected - eLeftVal)*kp);
-		mRight((expected - eRightVal)*kp);
-		script.wait(10);
-	}
-}
-
-//Гироскопыч
-/*
-    ARGS:
-        vel - Power are being given to both motors
-        len - Length computed to encoder units 
-	Idea:
-	    1)If delta angle < 0, right wheel's velocity need to be increased;
-	    2)If delta angle  > 0, left wheel's velocity need to be increased;
-*/
-function SimpleGyroMovement (vel, length)
-{
-	var z0 = gyro.read()[6]/1000;//Initial Robot's direction 
-	var z = 0;
-	var velLeft = 0;
-	var velRight = 0;
-	eLeft.reset();
-	eRight.reset();
-	var eR = eRight.read();
-	var eL = eLeft.read();
-	while( !((eR+eL)/2 < -length)  )
-	{
-		z = z0 - gyro.read()[6]/1000;
-		if (z > 10) z = 10;
-		if (z < -10) z = -10;
-		velLeft = vel+kp*z;
-		velRight = vel-kp*z;
-		eR = eRight.read(); 
-		eL = eLeft.read();
-		mLeft(velLeft);
-		mRight(velRight);
-		script.wait(10);
-	}	
-}
-
-/*
-    ARGS:
-        vel - Average velocity of virtual wheels
-        len - Virtual wheels' mileage(пробег) average
-	Idea:
-	    Usage virtual encoders for each of drive wheels
-*/
-function VirtualWheelGyroMovement (vel, length)
-{
-	var k = 10;// Coefficient to control virtual wheels
-	var kVelocity = 10;// Coefficient to control velocity. Bigger is BETTER !!!
-	var z0 = gyro.read()[6]/1000;//Initial Robot's direction 
-	var z = 0;
-	var eLeftVirtual = 0;
-	var eRightVirtual = 0;	
-	eLeft.reset();
-	eRight.reset();
-	var e4 = eLeft.read();
-	var e3 = eRight.read();	
-	while( !((e3+e4)/2 < -length)  )
-	{
-		z = z0 - gyro.read()[6]/1000;
-		if (z > 10) z = 10;
-		if (z < -10) z = -10;
-		eLeftVirtual += (vel-z/k);
-		eRightVirtual += (vel+z/k);
-		e4 = eLeft.read();
-		e3 = eRight.read();
-		velLeft = (eLeftVirtual - e4)/kVelocity;
-		velRight = (eRightVirtual - e3)/kVelocity;
-		mLeft(velLeft, false);
-		mRight(velRight, false);
-		script.wait(10);
-	}	
-}
-
-//Turn left around axis of robot
-function TurnGyro (speed,deg)
-{
-	var leftMotor = mLeft;
-	var rightMotor = mRight;
-	leftEncoder = eLeft;
-	rightEncoder = eRight;
-	leftEncoder.reset();
-	rightEncoder.reset();
-	var expected=0;
-	var valLeftEncoder = leftEncoder.read();
-	var valRightEncoder = rightEncoder.read();
-	var a = brick.gyroscope().read()[6]/1000;
-	while((a - brick.gyroscope().read()[6]/1000) < deg)
-	{
-		valLeftEncoder = leftEncoder.read();
-		valRightEncoder = rightEncoder.read();
-		expected += speed;
-		leftMotor((-expected - valLeftEncoder) * 3);
-		rightMotor((expected - valRightEncoder) * 3);
-		script.wait(10);
-	}
-}
-
-
-/*
-	speed - better to pass 1 to function
-	deg - what angle to turn 0 <= deg <= 175
-	Idea: turn left with gyro with RIGHT wheel while left wheel doesn't rotate
-*/
-function TurnRightWheel (speed,deg)
-{
-	var right = mRight;
-	var er = eRight;
-	er.reset();
-	var expected=0;
-	var rd = er.read();
-	var a = brick.gyroscope().read()[6]/1000;
-	while((a-brick.gyroscope().read()[6]/1000 < deg))
-	{
-		rd = er.read();
-		expected += speed;
-		right((expected - rd) * 3);
-		script.wait(10);
-	}
-}
-
-
-/*
-	speed - better to pass 1 to function
-	deg - what angle to turn 0 <= deg <= 175
-	Idea: turn right with gyro with LEFT wheel while right wheel doesn't rotate
-*/
-function TurnLeftWheel (speed, deg)
-{
-	var left = mLeft;
-	var el= eLeft;
-	el.reset();
-	var expected = 0;
-	var valLeftEnc = el.read();
-	var angle = brick.gyroscope().read()[6]/1000;
-	while(((angle - brick.gyroscope().read()[6]/1000) < deg))
-	{
-		valLeftEnc = el.read();
-		expected += speed;
-		left((expected - valLeftEnc) * 3);
-		script.wait(10);
-	}	
-	
-}
-
-function ForwardWallMovement()
-{
-	var leftEncoderVirtualWheel = 0;
-	
-	var rightEncoderVirtualWheel = 0;
-	
-	var shiftVirtualWheel = 0;
-	
-	var valueRightEncoder = 0;
-	
-	var valueLeftEncoder = 0;
-	
-	var currentDistanceToWall = 0;
-	
-	var sensorDistanceAnswer = 0;
-	
-	var minDistanceToWall = 20;
-	
-	var k = 10;//Коэффициент (обратная величина) регулятора скорости
-	var k1 = 2;//Коэффициент регулятора мощности
-	
-	eLeft.reset();
-	eRight.reset();
-	
-	while( valueLeftEncoder + valueRightEncoder > -2000)
-	{
-		valueRightEncoder = eRight.read();
-		valueLeftEncoder = eLeft.read();
-		sensorDistanceAnswer = uzSensor.read();
-		if (2 < sensorDistanceAnswer && sensorDistanceAnswer < 100) // the simplest filter for sensor
-		{
-			currentDistanceToWall = sensorDistanceAnswer;
+movementlib.iterate_lefthand = function(speed, sLeft, sFront) {
+	var lvar = {}
+	lvar.leftWallExists = (sLeft.read() < 100);
+	lvar.frontWallExists = (sFront.read() < 100);
+	if (!lvar.leftWallExists) {
+		movementlib.rotate_encoders(speed, pi / 2);
+		movementlib.move_correction(speed, 0, sLeft, sFront);
+		return;
+	} else {
+		if (lvar.frontWallExists) {
+			movementlib.rotate_encoders(speed, -pi / 2);
+			return;
+		} else {
+			movementlib.move_correction(speed, 0, sLeft, sFront);
+			return;
 		}
-		shiftVirtualWheel = (currentDistanceToWall - minDistanceToWall) / k;
-		
-		leftEncoderVirtualWheel += (-5 - shiftVirtualWheel);
-		
-		rightEncoderVirtualWheel += (-5 + shiftVirtualWheel);
-		
-		mLeft( (leftEncoderVirtualWheel - valueLeftEncoder) * k1, false);
-		
-		mRight( (rightEncoderVirtualWheel - valueRightEncoder) * k1, false);
-		
-		script.wait(10);
-	}	
+	}
 }
 
 
-//BFS-DFS-A*-below
-//-----------------------------------
 
 var trikTaxi = {}
 
@@ -630,17 +924,13 @@ trikTaxi.astar = function (start, end, maze, xsize, ysize) {
     return []
 }
 
-m = [false, false, false, false, false, false, false, false,
-    false, true, true, true, false, true, true, false,
-    false, true, false, true, false, true, true, false,
-    false, true, false, true, false, true, true, false,
-    false, true, false, true, false, true, true, false,
-    false, true, false, true, false, true, true, false,
-    false, true, false, true, true, true, true, false,
-    false, false, false, false, false, false, false, false]
-p1 = 9
-p2 = 14
-size = 8
-print(trikTaxi.dfs(p1, p2, m, size, size));
-print(trikTaxi.bfs(p1, p2, m, size, size));
-print(trikTaxi.astar(p1, p2, m, size, size));
+
+
+var main = function()
+{
+	var __interpretation_started_timestamp__ = Date.now();
+	script.wait(2000);
+	odometriya.Start();
+
+	return;
+}
