@@ -40,7 +40,7 @@ trikTaxi.getNeighbors = function (cell, xsize, ysize) {
     if (down >= 0 && down < xsize * ysize)
         result.push(down)
     left = cell - 1
-    if (left % size == xsize - 1) {
+    if (left % xsize == xsize - 1) {
         left = -1
     }
     if (left >= 0 && left < xsize * ysize)
