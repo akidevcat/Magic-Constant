@@ -8,8 +8,8 @@
 var movementlib = {}
 
 movementlib.cellsize = 69
-movementlib.kp = 2.5
-movementlib.kd = 0.1
+//kp recommended: = 2.5
+//kd recommended: = 0.1
 movementlib.correctiondelay = 10
 
 /*
@@ -17,6 +17,9 @@ Angle - rad
 */
 movementlib.rotate_encoders = function(speed, angle) {
 	var lvar = {}
+	if (angle == 0) {
+		return;
+	}
 	lvar.initialAngle = odometriya.teta;
 	if (angle > 0) {
 		mLeft(-speed);
@@ -33,7 +36,7 @@ movementlib.rotate_encoders = function(speed, angle) {
 	}
 	mLeft(0);
 	mRight(0);
-	odometriya.Reset();
+	//odometriya.Reset();
 }
 
 /*
@@ -49,21 +52,47 @@ movementlib.move_encoders = function(speed, distance) {
 	}
 	mLeft(0);
 	mRight(0);
-	odometriya.Reset();
+	//odometriya.Reset();
 }
 
 /*
 If distance is zero - moving until the end
-(Actually, it doesn't work with distance given UwU
 */
-movementlib.move_correction = function(speed, distance, sLeft, sFront) {
+movementlib.move_correction = function(speed, distance, kp, kd, sLeft, sFront) {
 	var lvar = {}
+	lvar.initialDistance = odometriya.distance;
 	lvar.perror = 0;
-	while (sFront.read() > movementlib.cellsize / 2 - l / 2) {
+	while ((distance == 0 && (sFront.read() > movementlib.cellsize / 2 - l / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
 		lvar.leftWallDistance = sLeft.read();
 		lvar.error = lvar.leftWallDistance - movementlib.cellsize / 2;
 		lvar.derative = (lvar.error - lvar.perror) / (movementlib.correctiondelay / 1000);
-		lvar.correction = lvar.error * movementlib.kp + lvar.derative * movementlib.kd;
+		lvar.correction = lvar.error * kp + lvar.derative * kd;
+		mLeft(speed - lvar.correction);
+		mRight(speed + lvar.correction);
+		lvar.perror = lvar.error;
+		script.wait(movementlib.correctiondelay);
+	}
+	mLeft(0);
+	mRight(0);
+}
+
+/*
+If distance is zero - moving until the end
+The same as before but it doesn't rotate the robot if the distance is higher than cellsize
+(Useful for path movement)
+*/
+movementlib.move_semicorrection = function(speed, distance, kp, kd, sLeft, sFront) {
+	var lvar = {}
+	lvar.initialDistance = odometriya.distance;
+	lvar.perror = 0;
+	while ((distance == 0 && (sFront.read() > movementlib.cellsize / 2 - l / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
+		lvar.leftWallDistance = sLeft.read();
+		lvar.error = lvar.leftWallDistance - movementlib.cellsize / 2;
+		lvar.derative = (lvar.error - lvar.perror) / (movementlib.correctiondelay / 1000);
+		lvar.correction = lvar.error * kp + lvar.derative * kd;
+		if (lvar.leftWallDistance > movementlib.cellsize) {
+			lvar.correction = 0;
+		}
 		mLeft(speed - lvar.correction);
 		mRight(speed + lvar.correction);
 		lvar.perror = lvar.error;
@@ -93,6 +122,30 @@ movementlib.iterate_lefthand = function(speed, sLeft, sFront) {
 			movementlib.move_correction(speed, 0, sLeft, sFront);
 			return;
 		}
+	}
+}
+
+/*
+Movement with known path.
+
+path - array of cell indexes
+sRight - can be undefined (if you don't have one)
+*/
+movementlib.move_path = function(speed, path, mazesizeX, mazesizeY, sLeft, sFront, sRight, kp, kd) {
+	if (kp == undefined)
+		kp = 0.1
+	if (kd == undefined)
+		kd = 0.1
+	var lvar = {}
+	path = path.reverse();
+	for (i = 0; i < path.length - 1; i++) {
+		var curpos = trikTaxi.getPos(path[i], mazesizeX, mazesizeY);
+		var nextpos = trikTaxi.getPos(path[i + 1], mazesizeX, mazesizeY);
+		var delta = [nextpos[0] - curpos[0], nextpos[1] - curpos[1]];
+		var angle = Math.atan2(-delta[1], delta[0]);
+		var delta_angle = -odometriya.teta + angle;
+		movementlib.rotate_encoders(speed, delta_angle);
+		movementlib.move_semicorrection(speed, movementlib.cellsize, kp, kd, irLeftSensor, irRightSensor);
 	}
 }
 
