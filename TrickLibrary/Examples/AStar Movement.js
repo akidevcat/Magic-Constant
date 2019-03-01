@@ -11,9 +11,9 @@ var main = function() {
 		    1, 1, 1, 1, 0, 1, 0, 1,
 		    0, 1, 0, 1, 1, 1, 1, 1,
 		    1, 1, 1, 1, 0, 1, 0, 1]
-	path = trikTaxi.astar(16, 63, maze, 8, 8);
+	path = trikTaxi.astar(16, 63, maze, 8, 8); //16 and 63 are the cell ids
 
-	script.wait(100)
+	script.wait(10);
 	
 	odometriya.Start();
 	
