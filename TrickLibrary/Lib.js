@@ -560,7 +560,6 @@ You can change 'deltat' according to the loop delay value. For example:
 */
 //This code requiers:
 //+ eLeft, eRight, pi, cpr, d, l
-
 var odometriya = {}
 
 //These variables are based on the given task
@@ -653,15 +652,18 @@ odometriya.Start = function() {
 var movementlib = {}
 
 movementlib.cellsize = 69
-movementlib.kp = 2.5
-movementlib.kd = 0.1
-movementlib.correctiondelay = 1
+//kp recommended: = 2.5
+//kd recommended: = 0.1
+movementlib.correctiondelay = 10
 
 /*
 Angle - rad
 */
 movementlib.rotate_encoders = function(speed, angle) {
 	var lvar = {}
+	if (angle == 0) {
+		return;
+	}
 	lvar.initialAngle = odometriya.teta;
 	if (angle > 0) {
 		mLeft(-speed);
@@ -678,7 +680,7 @@ movementlib.rotate_encoders = function(speed, angle) {
 	}
 	mLeft(0);
 	mRight(0);
-	odometriya.Reset();
+	//odometriya.Reset();
 }
 
 /*
@@ -694,20 +696,47 @@ movementlib.move_encoders = function(speed, distance) {
 	}
 	mLeft(0);
 	mRight(0);
-	odometriya.Reset();
+	//odometriya.Reset();
 }
 
 /*
 If distance is zero - moving until the end
 */
-movementlib.move_correction = function(speed, distance, sLeft, sFront) {
+movementlib.move_correction = function(speed, distance, kp, kd, sLeft, sFront) {
 	var lvar = {}
+	lvar.initialDistance = odometriya.distance;
 	lvar.perror = 0;
-	while (sFront.read() > movementlib.cellsize / 2 - l / 2) {
+	while ((distance == 0 && (sFront.read() > movementlib.cellsize / 2 - l / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
 		lvar.leftWallDistance = sLeft.read();
 		lvar.error = lvar.leftWallDistance - movementlib.cellsize / 2;
 		lvar.derative = (lvar.error - lvar.perror) / (movementlib.correctiondelay / 1000);
-		lvar.correction = lvar.error * movementlib.kp + lvar.derative * movementlib.kd;
+		lvar.correction = lvar.error * kp + lvar.derative * kd;
+		mLeft(speed - lvar.correction);
+		mRight(speed + lvar.correction);
+		lvar.perror = lvar.error;
+		script.wait(movementlib.correctiondelay);
+	}
+	mLeft(0);
+	mRight(0);
+}
+
+/*
+If distance is zero - moving until the end
+The same as before but it doesn't rotate the robot if the distance is higher than cellsize
+(Useful for path movement)
+*/
+movementlib.move_semicorrection = function(speed, distance, kp, kd, sLeft, sFront) {
+	var lvar = {}
+	lvar.initialDistance = odometriya.distance;
+	lvar.perror = 0;
+	while ((distance == 0 && (sFront.read() > movementlib.cellsize / 2 - l / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
+		lvar.leftWallDistance = sLeft.read();
+		lvar.error = lvar.leftWallDistance - movementlib.cellsize / 2;
+		lvar.derative = (lvar.error - lvar.perror) / (movementlib.correctiondelay / 1000);
+		lvar.correction = lvar.error * kp + lvar.derative * kd;
+		if (lvar.leftWallDistance > movementlib.cellsize) {
+			lvar.correction = 0;
+		}
 		mLeft(speed - lvar.correction);
 		mRight(speed + lvar.correction);
 		lvar.perror = lvar.error;
@@ -740,17 +769,50 @@ movementlib.iterate_lefthand = function(speed, sLeft, sFront) {
 	}
 }
 
+/*
+Movement with known path.
+
+path - array of cell indexes
+sRight - can be undefined (if you don't have one)
+*/
+movementlib.move_path = function(speed, path, mazesizeX, mazesizeY, sLeft, sFront, sRight, kp, kd) {
+	if (kp == undefined)
+		kp = 0.1
+	if (kd == undefined)
+		kd = 0.1
+	var lvar = {}
+	path = path.reverse();
+	for (i = 0; i < path.length - 1; i++) {
+		var curpos = trikTaxi.getPos(path[i], mazesizeX, mazesizeY);
+		var nextpos = trikTaxi.getPos(path[i + 1], mazesizeX, mazesizeY);
+		var delta = [nextpos[0] - curpos[0], nextpos[1] - curpos[1]];
+		var angle = Math.atan2(-delta[1], delta[0]);
+		var delta_angle = -odometriya.teta + angle;
+		movementlib.rotate_encoders(speed, delta_angle);
+		movementlib.move_semicorrection(speed, movementlib.cellsize, kp, kd, irLeftSensor, irRightSensor);
+	}
+}
 
 
+
+/*
+Usage:
+1) Create the maze matrix
+2) Set trikTaxi.walls
+3) Use A* (or something else but dunno why)
+*/
 var trikTaxi = {}
 
+//Write walls here (between which cells walls are). PUT THEM IN ASCENDING ORDER! (x, y) where x < y
+trikTaxi.walls = ["2, 3", "6, 7", "3, 11", "4, 12", "12, 13", "29, 37", "36, 37", "51, 59"]
+
 trikTaxi.getPos = function (cell, xsize, ysize) {
-    return [cell % xsize, cell / xsize]
+    return [cell % xsize, Math.floor(cell/ysize)]
 }
 
 trikTaxi.getEuclideanDistance = function (cell1, cell2, xsize, ysize) {
-    p1 = this.getPos(cell1, xsize, ysize)
-    p2 = this.getPos(cell2, xsize, ysize)
+    p1 = trikTaxi.getPos(cell1, xsize, ysize)
+    p2 = trikTaxi.getPos(cell2, xsize, ysize)
     deltax2 = (p1[0] - p2[0])
     deltax2 *= deltax2
     deltay2 = (p1[1] - p2[1])
@@ -759,30 +821,30 @@ trikTaxi.getEuclideanDistance = function (cell1, cell2, xsize, ysize) {
 }
 
 trikTaxi.getManhattanDistance = function (cell1, cell2, xsize, ysize) {
-    p1 = this.getPos(cell1, xsize, ysize)
-    p2 = this.getPos(cell2, xsize, ysize)
+    p1 = trikTaxi.getPos(cell1, xsize, ysize)
+    p2 = trikTaxi.getPos(cell2, xsize, ysize)
     return Math.abs(p1[0] - p2[0]) + Math.abs(p1[1] - p2[1])
 }
 
 trikTaxi.getNeighbors = function (cell, xsize, ysize) {
     result = []
     up = cell - xsize
-    if (up >= 0 && up < xsize * ysize)
+    if (up >= 0 && up < xsize * ysize && trikTaxi.walls.indexOf(up + ", " + cell) == -1)
         result.push(up)
     right = cell + 1
     if (right % xsize == 0) {
         right = -1
     }
-    if (right >= 0 && right < xsize * ysize)
+    if (right >= 0 && right < xsize * ysize && trikTaxi.walls.indexOf(cell + ", " + right) == -1)
         result.push(right)
     down = cell + xsize
-    if (down >= 0 && down < xsize * ysize)
+    if (down >= 0 && down < xsize * ysize && trikTaxi.walls.indexOf(cell + ", " + down) == -1)
         result.push(down)
     left = cell - 1
-    if (left % size == xsize - 1) {
+    if (left % xsize == xsize - 1) {
         left = -1
     }
-    if (left >= 0 && left < xsize * ysize)
+    if (left >= 0 && left < xsize * ysize && trikTaxi.walls.indexOf(left + ", " + cell) == -1)
         result.push(left)
     return result
 }
@@ -846,7 +908,7 @@ trikTaxi.dfs = function (start, end, maze, xsize, ysize) {
     tree = new Array(xsize * ysize)
     while (open.length > 0) {
         x = open.pop();
-        
+
         if (x == end) {
             return trikTaxi.reconstructPath(start, end, tree)
         }
@@ -874,51 +936,52 @@ maze is a binary array of cells
 xsize, ysize are the maze sizes
 */
 trikTaxi.astar = function (start, end, maze, xsize, ysize) {
-    open = [start]
-    closed = []
-    gscores = new Array(xsize * ysize)
-    fscores = new Array(xsize * ysize)
+    var lvar = {}
+    lvar.open = [start]
+    lvar.closed = []
+    lvar.gscores = new Array(xsize * ysize)
+    lvar.fscores = new Array(xsize * ysize)
     for (i = 0; i < xsize * ysize; i++) {
-        gscores[i] = Infinity
-        fscores[i] = Infinity
+        lvar.gscores[i] = Infinity
+        lvar.fscores[i] = Infinity
     }
-    gscores[start] = 0
-    fscores[start] = this.getManhattanDistance(start, end, xsize, ysize)
-    tree = new Array(xsize * ysize)
-    while (open.length > 0) {
-        x = open[open.length - 1]
-        xi = open.length - 1
-        for (i = 0; i < open.length; i++) {
-            if (fscores[open[i]] < fscores[x]) {
-                x = open[i]
-                xi = i
+    lvar.gscores[start] = 0
+    lvar.fscores[start] = trikTaxi.getManhattanDistance(start, end, xsize, ysize)
+    lvar.tree = new Array(xsize * ysize)
+    while (lvar.open.length > 0) {
+        lvar.x = lvar.open[lvar.open.length - 1]
+        lvar.xi = lvar.open.length - 1
+        for (i = 0; i < lvar.open.length; i++) {
+            if (lvar.fscores[lvar.open[i]] < lvar.fscores[lvar.x]) {
+                lvar.x = lvar.open[i]
+                lvar.xi = i
             }
         }
 
-        if (x == end) {
-            return trikTaxi.reconstructPath(start, end, tree)
+        if (lvar.x == end) {
+            return trikTaxi.reconstructPath(start, end, lvar.tree)
         }
-        open.splice(xi, 1)
-        closed.push(x)
+        lvar.open.splice(lvar.xi, 1)
+        lvar.closed.push(lvar.x)
 
-        neighbors = this.getNeighbors(x, xsize, ysize)
+        lvar.neighbors = trikTaxi.getNeighbors(lvar.x, xsize, ysize)
         
-        for (i = 0; i < neighbors.length; i++) {
-            y = neighbors[i]
-            if (!maze[y] || closed.indexOf(y) > -1) {
+        for (i = 0; i < lvar.neighbors.length; i++) {
+            lvar.y = lvar.neighbors[i]
+            if (!maze[lvar.y] || lvar.closed.indexOf(lvar.y) > -1) {
                 continue
             }
             
-            tentativeg = gscores[x] + this.getEuclideanDistance(x, y, xsize, ysize)
+            lvar.tentativeg = lvar.gscores[lvar.x] + trikTaxi.getEuclideanDistance(lvar.x, lvar.y, xsize, ysize)
 
-            if (open.indexOf(y) == -1) {
-                open.push(y)
-            } else if (tentativeg >= gscores[y]) {
+            if (lvar.open.indexOf(lvar.y) == -1) {
+                lvar.open.push(lvar.y)
+            } else if (lvar.tentativeg >= lvar.gscores[lvar.y]) {
                 continue
             }
-            tree[y] = x
-            gscores[y] = tentativeg
-            fscores[y] = gscores[y] + this.getManhattanDistance(y, end, xsize, ysize)
+            lvar.tree[lvar.y] = lvar.x
+            lvar.gscores[lvar.y] = lvar.tentativeg
+            lvar.fscores[lvar.y] = lvar.gscores[lvar.y] + trikTaxi.getManhattanDistance(lvar.y, end, xsize, ysize)
         }
     }
     return []
