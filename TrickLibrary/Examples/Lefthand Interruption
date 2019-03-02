@@ -1,0 +1,17 @@
+var TestFunction = function () {
+	movementlib.stop();
+}
+
+var main = function() {
+	script.wait(10);
+	odometriya.Start();
+	
+	var ti = script.timer(5000);
+	ti.timeout.connect(TestFunction);
+	
+	while (!movementlib.flStop) {
+		movementlib.iterate_lefthand(70, irLeftSensor, irRightSensor, 2.5, 0.1);
+	}
+	
+	movementlib.unfreeze();
+}
