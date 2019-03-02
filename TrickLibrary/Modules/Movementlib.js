@@ -18,8 +18,12 @@ movementlib.flStop = 0
 /*
 Stops all the movements
 */
-movementlib.stopall = function() {
+movementlib.stop = function() {
 	movementlib.flStop = 1;
+}
+
+movementlib.unfreeze = function() {
+	movementlib.flStop = 0;
 }
 
 /*
@@ -45,7 +49,6 @@ movementlib.rotate_encoders = function(speed, angle) {
 		if (movementlib.flStop) break;
 		script.wait(1);
 	}
-	flStop = 0;
 	mLeft(0);
 	mRight(0);
 }
@@ -74,7 +77,6 @@ movementlib.move_encoders = function(speed, distance) {
 		if (movementlib.flStop) break;
 		script.wait(1);
 	}
-	flStop = 0;
 	mLeft(0);
 	mRight(0);
 }
@@ -97,7 +99,6 @@ movementlib.move_correction = function(speed, distance, kp, kd, sLeft, sFront) {
 		lvar.perror = lvar.error;
 		script.wait(movementlib.correctiondelay);
 	}
-	flStop = 0;
 	mLeft(0);
 	mRight(0);
 }
@@ -125,7 +126,6 @@ movementlib.move_semicorrection = function(speed, distance, kp, kd, sLeft, sFron
 		lvar.perror = lvar.error;
 		script.wait(movementlib.correctiondelay);
 	}
-	flStop = 0;
 	mLeft(0);
 	mRight(0);
 }
@@ -134,6 +134,8 @@ movementlib.move_semicorrection = function(speed, distance, kp, kd, sLeft, sFron
 One left-hand movement iteration. Just call it inside a loop.
 sLeft is the left sensor. sFront is the front sensor.
 */
+movementlib.iterate_lefthand_state = 0
+
 movementlib.iterate_lefthand = function(speed, sLeft, sFront, kp, kd) {
 	var lvar = {}
 	lvar.leftWallExists = (sLeft.read() < 100);
