@@ -81,6 +81,8 @@ odometriya.Update = function() {
 	odometriya.distance += Math.abs(lvar.v * lvar.deltat);
 	odometriya.teta += lvar.deltateta;
 	
+	
+	print("GyroTETA = " + (-brick.gyroscope().read()[6] * pi ) / 180000);//GYROSCOPE ANGLE(PblCKAHIE)
 	//print("x: " + odometriya.x); //<<<<<<< DEBUG TUUUT <<<<<<<<
 	//print("y: " + odometriya.y);
 	//print("teta: " + odometriya.teta);
