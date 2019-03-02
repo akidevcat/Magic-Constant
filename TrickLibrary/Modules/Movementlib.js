@@ -106,20 +106,20 @@ movementlib.move_semicorrection = function(speed, distance, kp, kd, sLeft, sFron
 One left-hand movement iteration. Just call it inside a loop.
 sLeft is the left sensor. sFront is the front sensor.
 */
-movementlib.iterate_lefthand = function(speed, sLeft, sFront) {
+movementlib.iterate_lefthand = function(speed, sLeft, sFront, kp, kd) {
 	var lvar = {}
 	lvar.leftWallExists = (sLeft.read() < 100);
 	lvar.frontWallExists = (sFront.read() < 100);
 	if (!lvar.leftWallExists) {
 		movementlib.rotate_encoders(speed, pi / 2);
-		movementlib.move_correction(speed, 0, sLeft, sFront);
+		movementlib.move_correction(speed, 0, kp, kd, sLeft, sFront);
 		return;
 	} else {
 		if (lvar.frontWallExists) {
 			movementlib.rotate_encoders(speed, -pi / 2);
 			return;
 		} else {
-			movementlib.move_correction(speed, 0, sLeft, sFront);
+			movementlib.move_correction(speed, 0, kp, kd, sLeft, sFront);
 			return;
 		}
 	}
@@ -127,7 +127,6 @@ movementlib.iterate_lefthand = function(speed, sLeft, sFront) {
 
 /*
 Movement with known path.
-
 path - array of cell indexes
 sRight - can be undefined (if you don't have one)
 */
