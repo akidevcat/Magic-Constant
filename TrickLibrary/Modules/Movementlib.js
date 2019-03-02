@@ -12,6 +12,16 @@ movementlib.cellsize = 69
 //kd recommended: = 0.1
 movementlib.correctiondelay = 10
 
+//Local variables (don't TOUCH111)
+movementlib.flStop = 0
+
+/*
+Stops all the movements
+*/
+movementlib.stopall = function() {
+	movementlib.flStop = 1;
+}
+
 /*
 Angle - rad
 */
@@ -32,11 +42,24 @@ movementlib.rotate_encoders = function(speed, angle) {
 	while (true) {
 		if ((angle > 0 && (odometriya.teta - lvar.initialAngle) >= angle) || 
 			(angle < 0 && (odometriya.teta - lvar.initialAngle) <= angle)) { break; }
+		if (movementlib.flStop) break;
 		script.wait(1);
 	}
+	flStop = 0;
 	mLeft(0);
 	mRight(0);
-	//odometriya.Reset();
+}
+
+/*
+Angle - rad
+*/
+movementlib.rotate_absolute = function(speed, angle) {
+	var lvar = {}
+	if (angle == 0) {
+		return;
+	}
+	lvar.delta_angle = -odometriya.teta + angle;
+	movementlib.rotate_encoders(speed, delta_angle);
 }
 
 /*
@@ -48,11 +71,12 @@ movementlib.move_encoders = function(speed, distance) {
 	mLeft(speed);
 	mRight(speed);
 	while (odometriya.distance - lvar.initialDistance < distance) {
+		if (movementlib.flStop) break;
 		script.wait(1);
 	}
+	flStop = 0;
 	mLeft(0);
 	mRight(0);
-	//odometriya.Reset();
 }
 
 /*
@@ -63,6 +87,7 @@ movementlib.move_correction = function(speed, distance, kp, kd, sLeft, sFront) {
 	lvar.initialDistance = odometriya.distance;
 	lvar.perror = 0;
 	while ((distance == 0 && (sFront.read() > movementlib.cellsize / 2 - l / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
+		if (movementlib.flStop) break;
 		lvar.leftWallDistance = sLeft.read();
 		lvar.error = lvar.leftWallDistance - movementlib.cellsize / 2;
 		lvar.derative = (lvar.error - lvar.perror) / (movementlib.correctiondelay / 1000);
@@ -72,6 +97,7 @@ movementlib.move_correction = function(speed, distance, kp, kd, sLeft, sFront) {
 		lvar.perror = lvar.error;
 		script.wait(movementlib.correctiondelay);
 	}
+	flStop = 0;
 	mLeft(0);
 	mRight(0);
 }
@@ -86,6 +112,7 @@ movementlib.move_semicorrection = function(speed, distance, kp, kd, sLeft, sFron
 	lvar.initialDistance = odometriya.distance;
 	lvar.perror = 0;
 	while ((distance == 0 && (sFront.read() > movementlib.cellsize / 2 - l / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
+		if (movementlib.flStop) break;
 		lvar.leftWallDistance = sLeft.read();
 		lvar.error = lvar.leftWallDistance - movementlib.cellsize / 2;
 		lvar.derative = (lvar.error - lvar.perror) / (movementlib.correctiondelay / 1000);
@@ -98,6 +125,7 @@ movementlib.move_semicorrection = function(speed, distance, kp, kd, sLeft, sFron
 		lvar.perror = lvar.error;
 		script.wait(movementlib.correctiondelay);
 	}
+	flStop = 0;
 	mLeft(0);
 	mRight(0);
 }
