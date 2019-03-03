@@ -7,3 +7,4 @@ for file in glob.glob("Modules/*.js"):
         result += data + '\n' + '\n'
 with open("composed.js", "w") as tf:
     tf.write(result)
+input("Press Enter to continue...")
