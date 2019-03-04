@@ -1,11 +1,11 @@
-﻿//Controllers
-var controllers = []
+//Controllers
+var controllers = [{}, {}, {}]
 controllers[0].name = "trik-67ae70"
 controllers[1].name = "trik-f657a8"
 controllers[2].name = "trik-52aee1"
 controllers[0].ip = "192.168.77.1"
 controllers[1].ip = "192.168.77.204"
-controllers[2].ip = "192.168.77.226"
+controllers[2].ip = "192.168.77.226" 
 /*
 Status:
 0 - finished
@@ -17,20 +17,20 @@ controllers[2].status = 0
 
 // Robot's settings
 var pi = 3.141592653589793;
-var d = 5.6 // wheels' diameter, cm
-var l = 17.5 // Robot's base, cm
+var d = 8.4 // wheels' diameter, cm
+var l = 19.5 // Robot's base, cm
 var degInRad = 180 / pi;
 var cmtodeg = (pi*56)/3600;
 
 // Motors
-var mLeft = brick.motor(M4).setPower; // Default left motor in 2D simulator
-var mRight = brick.motor(M3).setPower; // Default right motor in 2D simulator
-var cpr = 360 // Encoder's count per round of wheel //372 mb
+var mLeft = brick.motor(M2).setPower; // Default left motor in 2D simulator
+var mRight = brick.motor(M1).setPower; // Default right motor in 2D simulator
+var cpr = 385 // Encoder's count per round of wheel //274 or 385
 var cprToDeg = 360/cpr;
 
 // Encoders
-var eLeft = brick.encoder(E4); // Default left encoder in 2D simulator
-var eRight = brick.encoder(E3); // Default right encoder in 2D simulator
+var eLeft = brick.encoder(E2); // Default left encoder in 2D simulator
+var eRight = brick.encoder(E1); // Default right encoder in 2D simulator
 eLeft.reset();
 eRight.reset();
 
