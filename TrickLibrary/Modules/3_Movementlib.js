@@ -7,7 +7,7 @@
 
 var movementlib = {}
 
-movementlib.cellsize = 69
+movementlib.cellsize = 40
 //kp recommended: = 2.5
 //kd recommended: = 0.1
 movementlib.correctiondelay = 10
