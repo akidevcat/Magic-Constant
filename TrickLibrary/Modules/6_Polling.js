@@ -9,6 +9,28 @@ polling.refreshDelay = 100
 //Local variables (Don't touch)
 polling.log = [] //server-only
 
+polling.onMessage = function (sender, msg) {
+	display.print("MR" + msg + " " + sender);
+    //print("Message received: CurrentHullId: " + mailbox.myHullNumber() + " From: " + sender);
+    if (msg.length > 0) {
+        if (mailbox.myHullNumber == 0) {
+            var packet = {};
+            packet.time = Date.now();
+            packet.msg = msg;
+            packet.hullid = sender;
+            polling.log.push(packet);
+        }
+        if (msg[0] == "#") {
+            var result = eval(msg.slice(1, msg.length));
+			display.print("R" + result);
+            mailbox.send(0, "$" + result);
+        }
+        if (msg[0] == "$" && mailbox.myHullNumber() == 0) { //from client to server - cmd finished
+            controllers[sender].status = 0;
+            controllers[sender].callback = msg.slice(1, msg.length);
+        }
+    }
+}
 
 /*
 Call this method on init. 
@@ -23,16 +45,23 @@ polling.start = function() {
     updateTimer.timeout.connect(polling.update);
     */
     //mailbox.newMessage.connect(function(sender, message) { print(message); });
+	//if (mailbox.myHullNumber() != 0) //Main controller
+        mailbox.connect(controllers[0].ip);
     mailbox.newMessage.connect(polling.onMessage);
+	//mailbox.newMessage.connect(function(sender, message) { display.print(message + " " + sender); });
 }
 
 polling.send = function (hull, text) {
     if (text == "")
         return;
     mailbox.send(hull, text);
-    if (hull == 0 && text[0] == "#") {
-        controllers[sender].status = 1;
+    if (mailbox.myHullNumber() == 0 && text[0] == "#") {
+        controllers[hull].status = 1;
     }
+}
+
+polling.readyall = function() {
+	
 }
 
 //Local methods
@@ -53,26 +82,6 @@ polling.update = function() {
         }
     }
 }*/
-polling.onMessage = function (sender, msg) {
-    print("Message received: CurrentHullId: " + mailbox.myHullNumber() + " From: " + sender);
-    if (msg.length > 0) {
-        if (mailbox.myHullNumber == 0) {
-            var packet = {};
-            packet.time = Date.now();
-            packet.msg = msg;
-            packet.hullid = sender;
-            polling.log.push(packet);
-        }
-        if (msg[0] == "#") {
-            var result = eval(msg.slice(1, msg.length));
-            mailbox.send(0, "$" + result);
-        }
-        if (msg[0] == "$" && mailbox.myHullNumber() == 0) { //from client to server - cmd finished
-            controllers[sender].status = 0;
-            controllers[sender].callback = msg.slice(1, msg.length);
-        }
-    }
-}
 //##################
 //REGION END
 //##################
