@@ -47,7 +47,7 @@ eRight.reset();
 
 // Cell's parameters
 var cellLength = 52.5 * cpr / (pi * d);
-var length = 69;
+var length = 40;
 
 //Gyroscope settings
 var timeCalibrateRealRobot = 10000;
