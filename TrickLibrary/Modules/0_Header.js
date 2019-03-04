@@ -1,13 +1,19 @@
-﻿//Connection
-var trikMain = {}
-var trik1 = {}
-var trik2 = {}
-trikMain.name = "trik-67ae70"
-trik1.name = "trik-f657a8"
-trik2.name = "trik-52aee1"
-trikMain.ip = "192.168.77.1"
-trik1.ip = "192.168.77.204"
-trik2.ip = "192.168.77.226"
+﻿//Controllers
+var controllers = []
+controllers[0].name = "trik-67ae70"
+controllers[1].name = "trik-f657a8"
+controllers[2].name = "trik-52aee1"
+controllers[0].ip = "192.168.77.1"
+controllers[1].ip = "192.168.77.204"
+controllers[2].ip = "192.168.77.226"
+/*
+Status:
+0 - finished
+1 - executing
+*/
+controllers[0].status = 0 
+controllers[1].status = 0
+controllers[2].status = 0
 
 // Robot's settings
 var pi = 3.141592653589793;
