@@ -1,7 +1,10 @@
 ﻿//Connection
-var ipTrikMain = "192.168.77.001"
-var ipTrik1 = "192.168.77.204"
-var ipTrik2 = "192.168.77.226"
+var trikMain.name = "trik-67ae70"
+var trik1.name = "trik-f657a8"
+var trik2.name = "trik-52aee1"
+var trikMain.ip = "192.168.77.1"
+var trik1.ip = "192.168.77.204"
+var trik2.ip = "192.168.77.226"
 
 // Robot's settings
 var pi = 3.141592653589793;
