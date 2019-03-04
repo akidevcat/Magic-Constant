@@ -23,7 +23,7 @@ odometriya.teta = 0 //90* = pi / 2; 180* = pi; 270* = 1.5 * pi; 360* = 2 * pi
 //This is the delay between iterations inside the main loop (<Your MS Delay> / 1000)
 //If this value is 0 then it'll be calculated automatically (!but less accurate!)
 odometriya.deltat = 0 / 1000
-odometriya.updatedelay = 4
+odometriya.updatedelay = 1
 
 //These are the local ones (don't edit them):
 odometriya.lastrawleft = 0
@@ -63,8 +63,8 @@ odometriya.Update = function() {
 		lvar.deltat = odometriya.deltat;
 	}
 	
-	lvar.rawleft = eLeft.readRawData();
-	lvar.rawright = eRight.readRawData();
+	lvar.rawleft = eLeft.read();
+	lvar.rawright = eRight.read();
 	
 	lvar.deltaleft = lvar.rawleft - odometriya.lastrawleft;
 	lvar.deltaright = lvar.rawright - odometriya.lastrawright;
@@ -82,7 +82,7 @@ odometriya.Update = function() {
 	odometriya.teta += lvar.deltateta;
 	
 	
-	print("GyroTETA = " + (-brick.gyroscope().read()[6] * pi ) / 180000);//GYROSCOPE ANGLE(PblCKAHIE)
+	//print("GyroTETA = " + (-brick.gyroscope().read()[6] * pi ) / 180000);//GYROSCOPE ANGLE(PblCKAHIE)
 	//print("x: " + odometriya.x); //<<<<<<< DEBUG TUUUT <<<<<<<<
 	//print("y: " + odometriya.y);
 	//print("teta: " + odometriya.teta);
