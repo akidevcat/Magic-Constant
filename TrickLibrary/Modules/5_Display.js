@@ -1,8 +1,6 @@
 //##################
-//REGION: TrikTaxi (Path Construction)
+//REGION DISPLAY
 //##################
-//This code requiers:
-//-
 
 var display = {}
 
