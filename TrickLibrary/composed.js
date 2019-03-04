@@ -1,3 +1,14 @@
+﻿//Connection
+var trikMain = {}
+var trik1 = {}
+var trik2 = {}
+trikMain.name = "trik-67ae70"
+trik1.name = "trik-f657a8"
+trik2.name = "trik-52aee1"
+trikMain.ip = "192.168.77.1"
+trik1.ip = "192.168.77.204"
+trik2.ip = "192.168.77.226"
+
 // Robot's settings
 var pi = 3.141592653589793;
 var d = 5.6 // wheels' diameter, cm
@@ -1048,4 +1059,25 @@ trikTaxi.astar = function (start, end, maze, xsize, ysize) {
 //REGION END
 //##################
 
+
+//##################
+//REGION: TrikTaxi (Path Construction)
+//##################
+//This code requiers:
+//-
+
+var display = {}
+
+display.print = function(text, x, y) {
+	if (x == undefined || y == undefined) {
+		x = 10;
+		y = 10;
+	}
+	brick.display().addLabel(text, x, y);
+	brick.display().redraw();
+}
+
+//##################
+//REGION END
+//##################
 

@@ -1,10 +1,13 @@
 ﻿//Connection
-var trikMain.name = "trik-67ae70"
-var trik1.name = "trik-f657a8"
-var trik2.name = "trik-52aee1"
-var trikMain.ip = "192.168.77.1"
-var trik1.ip = "192.168.77.204"
-var trik2.ip = "192.168.77.226"
+var trikMain = {}
+var trik1 = {}
+var trik2 = {}
+trikMain.name = "trik-67ae70"
+trik1.name = "trik-f657a8"
+trik2.name = "trik-52aee1"
+trikMain.ip = "192.168.77.1"
+trik1.ip = "192.168.77.204"
+trik2.ip = "192.168.77.226"
 
 // Robot's settings
 var pi = 3.141592653589793;
