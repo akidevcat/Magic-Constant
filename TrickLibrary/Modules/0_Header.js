@@ -1,3 +1,8 @@
+﻿//Connection
+var ipTrikMain = "192.168.77.001"
+var ipTrik1 = "192.168.77.204"
+var ipTrik2 = "192.168.77.226"
+
 // Robot's settings
 var pi = 3.141592653589793;
 var d = 5.6 // wheels' diameter, cm
