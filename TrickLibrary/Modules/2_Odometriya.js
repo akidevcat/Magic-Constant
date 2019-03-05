@@ -19,6 +19,8 @@ var odometriya = {}
 odometriya.x = 0
 odometriya.y = 0
 odometriya.distance = 0
+odometriya.lDistance = 0
+odometriya.rDistance = 0
 odometriya.teta = 0 //90* = pi / 2; 180* = pi; 270* = 1.5 * pi; 360* = 2 * pi
 //This is the delay between iterations inside the main loop (<Your MS Delay> / 1000)
 //If this value is 0 then it'll be calculated automatically (!but less accurate!)
@@ -79,6 +81,8 @@ odometriya.Update = function() {
 	odometriya.x += Math.cos(odometriya.teta) * lvar.v * lvar.deltat;
 	odometriya.y += Math.sin(odometriya.teta) * lvar.v * lvar.deltat;
 	odometriya.distance += Math.abs(lvar.v * lvar.deltat);
+	odometriya.lDistance += Math.abs(lvar.vleft * lvar.deltat);
+	odometriya.rDistance += Math.abs(lvar.vright * lvar.deltat);
 	odometriya.teta += lvar.deltateta;
 	
 	
