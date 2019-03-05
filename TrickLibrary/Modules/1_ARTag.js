@@ -23,8 +23,6 @@ var artag = function()
 	var width = 160;
 	var width_u = 156; // area of interest
 
-
-
 	function coords(x, y) // alternative of pair in c++
 	{
 		this.x = x;
@@ -77,11 +75,21 @@ var artag = function()
 
 	function print_matrix(m)
 	{
-		var le = m.length;
-		for(var i = 0; i < le; ++i)
+		//var le = m.length;
+		//for(var i = 0; i < le; ++i)
+		//{
+		//	print(m[i]);
+		//}
+		var s = "";
+		for(var i = 0; i < height; ++i)
 		{
-			print(m[i]);
+			for(var j = 0; j < width; ++j)
+			{
+				s += m[i][j].toString();
+			}
+			s += "\n";
 		}
+		print(s);
 	}
 
 	function matrix_to_file(m)
@@ -179,9 +187,37 @@ var artag = function()
 		return r * 256 * 256 + g * 256 + b;
 	}
 
+	var alternative_rgb_to_bool = function(rgb)
+	{
+		var r = get_r(rgb);
+		var g = get_g(rgb);
+		var b = get_b(rgb);
+		
+		var brightness_const = 120;
+		
+		
+		if (r + g + b < brightness_const)
+		{
+			return 1; //dark
+		}
+		else
+		{
+			return 0; //light
+		}
+	}
+
+	var alternative1_rgb_to_bool = function(rgb)
+	{
+		var r = get_r(rgb);
+		var g = get_g(rgb);
+		var b = get_b(rgb);
+		
+		
+	}
+
 	var picture_processing = function() // var pic after that looks like 1-0 matrix
 	{
-		
+		/* // first version
 		for(var h = 1; h < height - 1; ++h)
 		{
 			for(var w = 1; w < width - 1; ++w)
@@ -193,6 +229,20 @@ var artag = function()
 				pic[h][w] = num;
 			}
 		}
+		*/
+		// second version
+		for(var h = 1; h < height - 1; ++h)
+		{
+			for(var w = 1; w < width - 1; ++w)
+			{
+				var r = get_r(pic[h][w]);
+				var g = get_g(pic[h][w]);
+				var b = get_b(pic[h][w]);
+				var avg = (r + g + b) / 3;
+				pic[h][w] = avg;
+			}
+		}
+		
 		
 		for(var h = 0; h < height; ++h)
 		{
@@ -202,7 +252,26 @@ var artag = function()
 			}
 		}
 	}
-
+	
+	var borders_is_clear = function()
+	{
+		for(var w = 3; w < width; ++w)
+		{
+			if(pic[0][w] == 1 || pic[height-1][w] == 1)
+			{
+				return 0;
+			}
+		}
+		for(var h = 0; h < height; ++h)
+		{
+			if(pic[h][3] == 1 || pic[h][width-1] == 1)
+			{
+				return 0;
+			}
+		}
+		return 1;
+	}
+	
 	function alternative_search_of_vertexes()
 	{
 		var goto_flag = 0;
@@ -227,6 +296,27 @@ var artag = function()
 				break;
 			}
 		}
+		if(goto_flag == 0)
+		{
+			for(var i = 4; i < height_u; ++i)
+			{
+				for(var x = width_u, y = i; x >= 4 && y < height_u; --x, ++y)
+				{
+					if(pic[y][x] == 1)
+					{
+						vertexes["x1"] = x;
+						vertexes["y1"] = y;
+						
+						goto_flag = 1;
+						break
+					}
+				}
+				if(goto_flag == 1)
+				{
+					break;
+				}
+			}
+		}
 		
 		//2
 		
@@ -248,6 +338,27 @@ var artag = function()
 			if(goto_flag == 1)
 			{
 				break;
+			}
+		}
+		if(goto_flag == 0)
+		{
+			for(var i = 4; i < height_u; ++i)
+			{
+				for(var x = 4, y = i; x < width_u && y < height_u; ++x, ++y)
+				{
+					if(pic[y][x] == 1)
+					{
+						vertexes["x2"] = x;
+						vertexes["y2"] = y;
+						
+						goto_flag = 1;
+						break
+					}
+				}
+				if(goto_flag == 1)
+				{
+					break;
+				}
 			}
 		}
 		
@@ -296,7 +407,147 @@ var artag = function()
 				break;
 			}
 		}
+		print("vert: ", vertexes, "end_vert");
+		return;
+	}
+
+function full_area_alternative_search_of_vertexes()
+	{
+		var goto_flag = 0;
 		
+		// 1
+		
+		for(var i = 3; i < width; ++i)
+		{
+			for(var x = i, y = 0; x >= 3 && y < height; --x, ++y)
+			{
+				if(pic[y][x] == 1)
+				{
+					vertexes["x1"] = x;
+					vertexes["y1"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		if(goto_flag == 0)
+		{
+			for(var i = 0; i < height; ++i)
+			{
+				for(var x = width-1, y = i; x >= 3 && y < height; --x, ++y)
+				{
+					if(pic[y][x] == 1)
+					{
+						vertexes["x1"] = x;
+						vertexes["y1"] = y;
+						
+						goto_flag = 1;
+						break
+					}
+				}
+				if(goto_flag == 1)
+				{
+					break;
+				}
+			}
+		}
+		
+		//2
+		
+		goto_flag = 0;
+		
+		for(var i = width - 1; i >= 3; --i)
+		{
+			for(var x = i, y = 3; x < width && y < height; ++x, ++y)
+			{
+				if(pic[y][x] == 1)
+				{	
+					vertexes["x2"] = x;
+					vertexes["y2"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		if(goto_flag == 0)
+		{
+			for(var i = 0; i < height; ++i)
+			{
+				for(var x = 3, y = i; x < width && y < height; ++x, ++y)
+				{
+					if(pic[y][x] == 1)
+					{
+						vertexes["x2"] = x;
+						vertexes["y2"] = y;
+						
+						goto_flag = 1;
+						break
+					}
+				}
+				if(goto_flag == 1)
+				{
+					break;
+				}
+			}
+			
+		}
+		
+		//3
+		
+		goto_flag = 0;
+		
+		for(var i = width - 1; i >= 3; --i)
+		{
+			for(var x = i, y = height - 1; x < width && y >= 0; ++x, --y)
+			{
+				if(pic[y][x] == 1)
+				{
+					vertexes["x3"] = x;
+					vertexes["y3"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		
+		//4
+		
+		goto_flag = 0;
+		
+		for(var i = 3; i < width; ++i)
+		{
+			for(var x = i, y = height - 1; x >= 3 && y >= 0; --x, --y)
+			{
+				if(pic[y][x] == 1)
+				{
+					vertexes["x4"] = x;
+					vertexes["y4"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		print("vert: ", vertexes["x1"], " ", vertexes["y1"], "end_vert");
 		return;
 	}
 
@@ -434,13 +685,14 @@ var artag = function()
 				now_x = Math.round(squares[i][j].x);
 				now_y = Math.round(squares[i][j].y);
 				result_matrix[i][j] =  pic[now_y][now_x];
+				pic[now_y][now_x] = 2;
 			}
 		}
 		
 		return;
 	}
 
-	function artag_decode()
+	function artag_decode_old()
 	{
 		var n, x, y;
 		if(result_matrix[0][0] == 0)
@@ -467,12 +719,100 @@ var artag = function()
 			x = result_matrix[1][3] * 4 + result_matrix[2][0] * 2 + result_matrix[2][2];
 			y = result_matrix[2][3] * 4 + result_matrix[3][1] * 2 + result_matrix[3][2];
 		}
+		else
+		{
+			return "not a number";
+		}
 		return [x, y, n];
+	}
+	
+	function artag_decode()
+	{
+		// verify the number of checking bits
+		
+		var sum = 0;
+		
+		for(var i = 0; i < 4; i += 3)
+		{
+			for(var j = 0; j < 4; j += 3)
+			{
+				sum += result_matrix[i][j];
+			}
+		}
+		if(sum != 3)
+		{
+			return "not a number";
+		}
+		
+		
+		// rotating result_matrix to base view
+		
+		var completed_matrix = [[], [], [], []];
+		
+		if(!result_matrix[3][0])
+		{
+			for(var y = 0; y < 4; ++y)
+			{
+				for(var x = 0; x < 4; ++x)
+				{
+					completed_matrix[3 - x][y] = result_matrix[y][x];
+				}
+			}
+		}
+		else if(!result_matrix[0][0])
+		{
+			for(var y = 0; y < 4; ++y)
+			{
+				for(var x = 0; x < 4; ++x)
+				{
+					completed_matrix[3 - y][3 - x] = result_matrix[y][x]; 
+				}
+			}
+		}
+		else if(!result_matrix[0][3])
+		{
+			for(var y = 0; y < 4; ++y)
+			{
+				for(var x = 0; x < 4; ++x)
+				{
+					completed_matrix[x][3 - y] = result_matrix[y][x]; 
+				}
+			}
+		}
+		
+		
+		// two dimensional completed_matrix to Hamming's code
+		
+		var hamm_code = [];
+		
+		for(var y = 0; y < 4; ++y)
+		{
+			for(var x = 0; x < 4; ++x)
+			{
+				if((x == 0 && y == 0) || (x == 0 && y == 3) || (x == 3 && y == 0) || (x == 3 && y == 3))
+				{
+					continue;
+				}
+				hamm_code.push(completed_matrix[y][x]);
+			}
+		}
+		print("hamm_code: ", hamm_code);
+		
+		// verify with checking bits TODO: write that
+		
+		
 	}
 
 	this.get_code = function()
-	{	
-		var temp_pic = brick.getPhoto().toString().split(","); // TODO: check workability of getPhoto()
+	{
+		/*
+		brick.configure("video2", "lineSensor");
+		brick.lineSensor("video2").init(true);
+		while(!brick.keys().wasPressed(KeysEnum.Up))
+			script.wait(100);
+		*/
+		var temp_pic = getPhoto().toString().split(",");
+		
 		
 		for(var h = 0; h < height; ++h)
 		{
@@ -483,19 +823,29 @@ var artag = function()
 			}
 		}	
 		picture_processing();
-		alternative_search_of_vertexes();
-		find_all_coords();
+		if(borders_is_clear())
+		{
+			full_area_alternative_search_of_vertexes();
+			find_all_coords();
+			
+			add_first_square_to_matrix();
+			add_second_square_to_matrix();
+			add_third_square_to_matrix();
+			add_fourth_square_to_matrix();
+			
+			matrix_coords_to_bool();
+			
+			print_matrix(pic);
+			
+			var res_numbers = artag_decode(); // [x, y, n] or "not a number"
+			
+			return (res_numbers == "not a number" ? "repeat" : res_numbers);
+		}
+		else
+		{
+			return "repeat";
+		}
 		
-		add_first_square_to_matrix();
-		add_second_square_to_matrix();
-		add_third_square_to_matrix();
-		add_fourth_square_to_matrix();
-		
-		matrix_coords_to_bool();
-		
-		var res_numbers = artag_decode(); // [x, y, n]
-		
-		return res_numbers; // [x, y, n]
 	}
 }
 
