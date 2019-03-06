@@ -1,54 +1,79 @@
+//Controllers
+var controllers = [{}, {}, {}]
+controllers[0].name = "trik-52aee1"
+controllers[1].name = "trik-f657a8"
+controllers[2].name = "trik-67ae70"
+controllers[0].ip = "192.168.77.1"
+controllers[1].ip = "192.168.77.204"
+controllers[2].ip = "192.168.77.221" 
+/*
+Status:
+0 - finished
+1 - executing
+*/
+controllers[0].status = 0 
+controllers[1].status = 0
+controllers[2].status = 0
+
 // Robot's settings
 var pi = 3.141592653589793;
-var d = 5.6 // wheels' diameter, cm
-var l = 17.5 // Robot's base, cm
+var d = 8.4 // wheels' diameter, cm
+var l = 19.5 // Robot's base, cm
+var sensorOffsetLeft = 7;
+var sensorOffsetFront = 10;
 var degInRad = 180 / pi;
 var cmtodeg = (pi*56)/3600;
 
 // Motors
-var mLeft = brick.motor(M4).setPower; // Default left motor in 2D simulator
-var mRight = brick.motor(M3).setPower; // Default right motor in 2D simulator
-var cpr = 360 // Encoder's count per round of wheel //372 mb
+var mLeft = brick.motor(M2).setPower; // Default left motor in 2D simulator
+var mRight = brick.motor(M1).setPower; // Default right motor in 2D simulator
+var mLeftGet = brick.motor(M2).power; // Default left motor in 2D simulator
+var mRightGet = brick.motor(M1).power; // Default right motor in 2D simulator
+var cpr = 385 // Encoder's count per round of wheel //274 or 385
+var cprLeft = 374;
+var cprRight = 385;
 var cprToDeg = 360/cpr;
 
 // Encoders
-var eLeft = brick.encoder(E4); // Default left encoder in 2D simulator
-var eRight = brick.encoder(E3); // Default right encoder in 2D simulator
+var eLeft = brick.encoder(E2); // Default left encoder in 2D simulator
+var eRight = brick.encoder(E1); // Default right encoder in 2D simulator
 eLeft.reset();
 eRight.reset();
 
 //Sensors
-//var uzRightSensor = brick.sensor(D1);//Ультразвуковой
-//var uzLeftSensor = brick.sensor(D2);//Ультразвуковой
-//var irRightSensor = brick.sensor(A1);//Инфракрасный
-//var irLeftSensor = brick.sensor(A2);//Инфракрасный
-//var tRightSensor = brick.sensor(A3);//Касания
-//var tLeftSensor = brick.sensor(A4);//Касания
-//var lRightSensor = brick.sensor(A5);//Освещенности
-//var lLeftSensor = brick.sensor(A6);//Освещенности
+var uzFrontSensor = brick.sensor(D1);//??????????????
+//var uzLeftSensor = brick.sensor(D2);//??????????????
+var irRightSensor = brick.sensor(A1);//????????????
+var irLeftSensor = brick.sensor(A2);//????????????
+//var tRightSensor = brick.sensor(A3);//???????
+//var tLeftSensor = brick.sensor(A4);//???????
+//var lRightSensor = brick.sensor(A5);//????????????
+//var lLeftSensor = brick.sensor(A6);//????????????
 
 
 // Cell's parameters
 var cellLength = 52.5 * cpr / (pi * d);
-var length = 69;
+var length = 40;
 
 //Gyroscope settings
 var timeCalibrateRealRobot = 10000;
 var timeCalibrate2DRobot = 2000;
-// угловая скорость по x
+// ??????? ???????? ?? x
 //brick.gyroscope().read()[0]; 
-// угловая скорость по y
+// ??????? ???????? ?? y
 //brick.gyroscope().read()[1];
-// угловая скорость по z
+// ??????? ???????? ?? z
 //brick.gyroscope().read()[2];
 //brick.gyroscope().read()[3]; // Valid time at gyroscope measurement
-// угол рысканья в миллиградусах −180 000 до 180 000
+// ???? ???????? ? ????????????? -180 000 ?? 180 000
 //var az = brick.gyroscope().read()[6];
-// угол тангажа в миллиградусах −180 000 до 180 000
+// ???? ??????? ? ????????????? -180 000 ?? 180 000
 //var ax = brick.gyroscope().read()[4];
-// угол крена в миллиградусах −90 000 до 90 000
+// ???? ????? ? ????????????? -90 000 ?? 90 000
 //var ay = brick.gyroscope().read()[5];
 
+
+//=====ARTAG CODE=====
 
 
 /*
@@ -56,6 +81,8 @@ var timeCalibrate2DRobot = 2000;
 	    var artag_obj = new artag();
 	    var code = artag_obj.get_code();
 */
+
+
 var artag = function()
 {
 	var pic = [];
@@ -548,7 +575,12 @@ var artag = function()
 }
 
 
+//=====ARTAG CODE END=====
 
+
+//##################
+//REGION: ODOMETRIYA
+//##################
 /*
 Usage:
 Add 'Start' method when initializing.
@@ -567,11 +599,13 @@ var odometriya = {}
 odometriya.x = 0
 odometriya.y = 0
 odometriya.distance = 0
+odometriya.lDistance = 0
+odometriya.rDistance = 0
 odometriya.teta = 0 //90* = pi / 2; 180* = pi; 270* = 1.5 * pi; 360* = 2 * pi
 //This is the delay between iterations inside the main loop (<Your MS Delay> / 1000)
 //If this value is 0 then it'll be calculated automatically (!but less accurate!)
-odometriya.deltat = 0 / 1000
-odometriya.updatedelay = 4
+odometriya.deltat = 10 / 1000
+odometriya.updatedelay = 10
 
 //These are the local ones (don't edit them):
 odometriya.lastrawleft = 0
@@ -611,8 +645,8 @@ odometriya.Update = function() {
 		lvar.deltat = odometriya.deltat;
 	}
 	
-	lvar.rawleft = eLeft.readRawData();
-	lvar.rawright = eRight.readRawData();
+	lvar.rawleft = eLeft.read();
+	lvar.rawright = eRight.read();
 	
 	lvar.deltaleft = lvar.rawleft - odometriya.lastrawleft;
 	lvar.deltaright = lvar.rawright - odometriya.lastrawright;
@@ -627,8 +661,12 @@ odometriya.Update = function() {
 	odometriya.x += Math.cos(odometriya.teta) * lvar.v * lvar.deltat;
 	odometriya.y += Math.sin(odometriya.teta) * lvar.v * lvar.deltat;
 	odometriya.distance += Math.abs(lvar.v * lvar.deltat);
+	odometriya.lDistance += Math.abs(lvar.vleft * lvar.deltat);
+	odometriya.rDistance += Math.abs(lvar.vright * lvar.deltat);
 	odometriya.teta += lvar.deltateta;
 	
+	
+	//print("GyroTETA = " + (-brick.gyroscope().read()[6] * pi ) / 180000);//GYROSCOPE ANGLE(PblCKAHIE)
 	//print("x: " + odometriya.x); //<<<<<<< DEBUG TUUUT <<<<<<<<
 	//print("y: " + odometriya.y);
 	//print("teta: " + odometriya.teta);
@@ -647,14 +685,82 @@ odometriya.Start = function() {
 	lvar.updateTimer = script.timer(odometriya.updatedelay);
 	lvar.updateTimer.timeout.connect(odometriya.Update);
 }
+//##################
+//REGION END
+//##################
 
+
+//##################
+//REGION ODOMETRIYA MOVEMENT
+//##################
+//This code requiers:
+//+ Odometriya module
+//+ eLeft, eRight, pi, cpr, d, l
 
 var movementlib = {}
 
-movementlib.cellsize = 69
+movementlib.cellsize = 40
 //kp recommended: = 2.5
 //kd recommended: = 0.1
-movementlib.correctiondelay = 10
+movementlib.correctiondelay = 5
+movementlib.sensorscorrectiondelay = 5
+movementlib.updatedelay = 5
+
+//Local variables (don't TOUCH111)
+movementlib.flStop = 0
+movementlib.mLeftValue = 0
+movementlib.mRightValue = 0
+movementlib.mTargetLeft = 0
+movementlib.mTargetRight = 0
+movementlib.lerp = 0.04
+
+movementlib.update = function() {
+	movementlib.mLeftValue = movementlib.mLeftValue + movementlib.lerp * movementlib.updatedelay * (movementlib.mTargetLeft - movementlib.mLeftValue);
+	movementlib.mRightValue = movementlib.mRightValue + movementlib.lerp * movementlib.updatedelay * (movementlib.mTargetRight - movementlib.mRightValue);
+	mLeft(movementlib.mLeftValue);
+	mRight(movementlib.mRightValue);
+}
+
+//Call this on start
+movementlib.start = function() {
+	var updateTimer = script.timer(movementlib.updatedelay);
+	updateTimer.timeout.connect(movementlib.update);
+}
+
+movementlib.mleft = function(vel) {
+	if (!isNaN(vel))
+		movementlib.mTargetLeft = vel;
+}
+
+movementlib.mright = function(vel) {
+	if (!isNaN(vel))
+		movementlib.mTargetRight = vel;
+}
+
+movementlib.mleftforce = function(vel) {
+	if (!isNaN(vel)) {
+		movementlib.mleft(vel);
+		movementlib.mLeftValue = vel;
+	}
+}
+
+movementlib.mrightforce = function(vel) {
+	if (!isNaN(vel)) {
+		movementlib.mright(vel);
+		movementlib.mRightValue = vel;
+	}
+}
+
+/*
+Stops all the movements
+*/
+movementlib.stop = function() {
+	movementlib.flStop = 1;
+}
+
+movementlib.unfreeze = function() {
+	movementlib.flStop = 0;
+}
 
 /*
 Angle - rad
@@ -666,21 +772,45 @@ movementlib.rotate_encoders = function(speed, angle) {
 	}
 	lvar.initialAngle = odometriya.teta;
 	if (angle > 0) {
-		mLeft(-speed);
-		mRight(speed);
+		movementlib.mleft(-speed);
+		movementlib.mright(speed);
+		//mLeft(-speed)
+		//mRight(speed)
 	} else {
-		mLeft(speed);
-		mRight(-speed);
+		//mLeft(speed);
+		//mRight(-speed);
+		movementlib.mleft(speed);
+		movementlib.mright(-speed);
 	}
 	
 	while (true) {
 		if ((angle > 0 && (odometriya.teta - lvar.initialAngle) >= angle) || 
 			(angle < 0 && (odometriya.teta - lvar.initialAngle) <= angle)) { break; }
+		if (movementlib.flStop) break;
+		//var deltaAngle = (odometriya.teta - lvar.initialAngle) / angle;
+		//var vel = Math.max(0.8, Math.min(deltaAngle, 1 - deltaAngle) * 2); //max in the middle
+		//movementlib.mleft(speed);
+		//movementlib.mright(-speed);
 		script.wait(1);
 	}
-	mLeft(0);
-	mRight(0);
-	//odometriya.Reset();
+	//movementlib.mleft(0);
+	//movementlib.mright(0);
+	//mLeft(0);
+	//mRight(0);
+	movementlib.mleftforce(0);
+	movementlib.mrightforce(0);
+}
+
+/*
+Angle - rad
+*/
+movementlib.rotate_absolute = function(speed, angle) {
+	var lvar = {}
+	if (angle == 0) {
+		return;
+	}
+	lvar.delta_angle = -odometriya.teta + angle;
+	movementlib.rotate_encoders(speed, delta_angle);
 }
 
 /*
@@ -689,35 +819,135 @@ Distance - cm
 movementlib.move_encoders = function(speed, distance) {
 	var lvar = {}
 	lvar.initialDistance = odometriya.distance;
-	mLeft(speed);
-	mRight(speed);
+	movementlib.mleft(speed);
+	movementlib.mright(speed);
 	while (odometriya.distance - lvar.initialDistance < distance) {
+		if (movementlib.flStop) break;
 		script.wait(1);
 	}
-	mLeft(0);
-	mRight(0);
-	//odometriya.Reset();
+	movementlib.mleft(0);
+	movementlib.mright(0);
+}
+
+movementlib.initCorrect = function(speed, sLeft, sRight, sFront) {
+	var leftD = sLeft != undefined ? sLeft.read() : Infinity;
+	var rightD = sRight != undefined ? sRight.read() : Infinity;
+	var frontD = sFront != undefined ? sFront.read() : Infinity;
+	var leftD = Math.min(leftD, length);
+	var rightD = Math.min(rightD, length);
+	var frontD = Math.min(frontD, length);
+	var initD = Infinity;
+	var sCorrector = undefined;
+	if (leftD != length) {
+		//Correct using the left one
+		print("Left");
+		initD = leftD;
+		sCorrector = sLeft;
+		
+	} else if (frontD != length) {
+		//Correct using the front one;
+		print("Front");
+		initD = frontD;
+		sCorrector = sFront;
+		
+	} else if (rightD != length) {
+		//Correct using the right one
+		print("Right");
+		initD = rightD;
+		sCorrector = sRight;
+		
+	} else {
+		return; 
+	}
+	
+	var lastD = Infinity;
+	
+	while(sCorrector.read() <= lastD) {
+		print("First: " + sCorrector.read());
+		movementlib.mleft(speed);
+		movementlib.mright(-speed);
+		lastD = sCorrector.read();
+		script.wait(30);
+	}
+	movementlib.mleftforce(0);
+	movementlib.mrightforce(0);
+	
+	if (lastD >= initD) {
+		lastD = Infinity;
+		
+		while(sCorrector.read() <= lastD) {
+			print("Second: " + sCorrector.read());
+			movementlib.mleft(-speed);
+			movementlib.mright(speed);
+			lastD = sCorrector.read();
+			script.wait(30);
+		}
+	}
+	
+	movementlib.mleftforce(0);
+	movementlib.mrightforce(0);
+}
+
+//TODO: ERROR HAS TO BE A DIFFERENCE BETWEEN THE MAIN LINE AND CONTROLLER'S POSITION
+movementlib.move_correction = function(speed, distance, kp, kd) {
+	var lvar = {}
+	lvar.initX = odometriya.x;
+	lvar.initY = odometriya.y;
+	lvar.initT = odometriya.teta;
+	lvar.initialDistance = odometriya.distance;
+	lvar.lInitialDistance = odometriya.lDistance;
+	lvar.rInitialDistance = odometriya.rDistance;
+	lvar.integral = 0;
+	//movementlib.mleft(speed);
+	//movementlib.mright(speed);
+	while (odometriya.distance - lvar.initialDistance < distance) {
+		if (movementlib.flStop) break;
+		lvar.dt =  movementlib.sensorscorrectiondelay / 1000;
+		lvar.lDeltaD = lvar.lInitialDistance - odometriya.lDistance;
+		lvar.rDeltaD = lvar.rInitialDistance - odometriya.rDistance;
+		//lvar.error = lvar.rDeltaD - lvar.lDeltaD;
+		lvar.y = odometriya.y - lvar.initY;
+		lvar.x = odometriya.x - lvar.initX;
+		//lvar.error = -Math.cos(lvar.initT) * (lvar.y - Math.tan(lvar.initT) * lvar.x);
+		lvar.error = (lvar.initT - odometriya.teta);
+		print(lvar.error);
+		lvar.integral = lvar.integral + lvar.error * lvar.dt;
+		lvar.derative = (lvar.error - lvar.perror) / lvar.dt;
+		lvar.correction = lvar.error * kp + lvar.derative * kd;
+		movementlib.mleft(speed - lvar.correction);
+		movementlib.mright(speed + lvar.correction);
+		lvar.perror = lvar.error;
+		//print(lvar.error);
+		script.wait(movementlib.correctiondelay);
+	}
+	movementlib.mleft(0);
+	movementlib.mright(0);
 }
 
 /*
 If distance is zero - moving until the end
 */
-movementlib.move_correction = function(speed, distance, kp, kd, sLeft, sFront) {
+movementlib.move_correction_sensors = function(speed, distance, kp, kd, ki, sLeft, sRight, sFront) {
 	var lvar = {}
 	lvar.initialDistance = odometriya.distance;
 	lvar.perror = 0;
-	while ((distance == 0 && (sFront.read() > movementlib.cellsize / 2 - l / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
-		lvar.leftWallDistance = sLeft.read();
-		lvar.error = lvar.leftWallDistance - movementlib.cellsize / 2;
-		lvar.derative = (lvar.error - lvar.perror) / (movementlib.correctiondelay / 1000);
-		lvar.correction = lvar.error * kp + lvar.derative * kd;
-		mLeft(speed - lvar.correction);
-		mRight(speed + lvar.correction);
+	lvar.integral = 0;
+	while ((distance == 0 && (sFront.read() + sensorOffsetFront > length / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
+		if (movementlib.flStop) break;
+		lvar.dt =  movementlib.sensorscorrectiondelay / 1000;
+		lvar.leftWallDistance = sLeft.read() + sensorOffsetLeft;
+		lvar.leftWallDistance = Math.min(lvar.leftWallDistance, length);
+		lvar.error = lvar.leftWallDistance - length / 2;
+		lvar.integral = lvar.integral + lvar.error * lvar.dt;
+		lvar.derative = (lvar.error - lvar.perror) / lvar.dt;
+		lvar.correction = lvar.error * kp + lvar.derative * kd + ki * lvar.integral;
+		movementlib.mleft(speed - lvar.correction);
+		movementlib.mright(speed + lvar.correction);
 		lvar.perror = lvar.error;
-		script.wait(movementlib.correctiondelay);
+		script.wait(movementlib.sensorscorrectiondelay);
 	}
-	mLeft(0);
-	mRight(0);
+	movementlib.mleft(0);
+	movementlib.mright(0);
 }
 
 /*
@@ -725,45 +955,57 @@ If distance is zero - moving until the end
 The same as before but it doesn't rotate the robot if the distance is higher than cellsize
 (Useful for path movement)
 */
-movementlib.move_semicorrection = function(speed, distance, kp, kd, sLeft, sFront) {
+movementlib.move_semicorrection_sensors = function(speed, distance, kp, kd, ki, sLeft, sRight, sFront) {
 	var lvar = {}
 	lvar.initialDistance = odometriya.distance;
 	lvar.perror = 0;
-	while ((distance == 0 && (sFront.read() > movementlib.cellsize / 2 - l / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
-		lvar.leftWallDistance = sLeft.read();
-		lvar.error = lvar.leftWallDistance - movementlib.cellsize / 2;
-		lvar.derative = (lvar.error - lvar.perror) / (movementlib.correctiondelay / 1000);
-		lvar.correction = lvar.error * kp + lvar.derative * kd;
-		if (lvar.leftWallDistance > movementlib.cellsize) {
+	lvar.integral = 0;
+	while ((distance == 0 && (sFront.read() + sensorOffsetFront > length / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
+		if (movementlib.flStop) break;
+		lvar.dt =  movementlib.sensorscorrectiondelay / 1000;
+		lvar.leftWallDistance = sLeft.read() + sensorOffsetLeft;
+		lvar.rightWallDistance = sRight.read() + sensorOffsetLeft;
+		lvar.leftWallDistance = Math.min(lvar.leftWallDistance, length / 2);
+		lvar.rightWallDistance = Math.min(lvar.rightWallDistance, length / 2);
+		
+		lvar.leftWallDistance = lvar.leftWallDistance <= lvar.rightWallDistance ? lvar.leftWallDistance : (length - lvar.rightWallDistance);
+		
+		lvar.error = lvar.leftWallDistance - length / 2;
+		lvar.integral = lvar.integral + lvar.error * lvar.dt;
+		lvar.derative = (lvar.error - lvar.perror) / lvar.dt;
+		lvar.correction = lvar.error * kp + lvar.derative * kd + lvar.derative;
+		if (lvar.leftWallDistance > length - (l / 2 + sensorOffsetLeft)) {
 			lvar.correction = 0;
 		}
-		mLeft(speed - lvar.correction);
-		mRight(speed + lvar.correction);
+		movementlib.mleft(speed - lvar.correction);
+		movementlib.mright(speed + lvar.correction);
 		lvar.perror = lvar.error;
-		script.wait(movementlib.correctiondelay);
+		script.wait(movementlib.sensorscorrectiondelay);
 	}
-	mLeft(0);
-	mRight(0);
+	movementlib.mleft(0);
+	movementlib.mright(0);
 }
 
 /*
 One left-hand movement iteration. Just call it inside a loop.
 sLeft is the left sensor. sFront is the front sensor.
 */
-movementlib.iterate_lefthand = function(speed, sLeft, sFront) {
+movementlib.iterate_lefthand_state = 0
+
+movementlib.iterate_lefthand = function(speed, sLeft, sRight, sFront, kp, kd, ki) {
 	var lvar = {}
-	lvar.leftWallExists = (sLeft.read() < 100);
-	lvar.frontWallExists = (sFront.read() < 100);
+	lvar.leftWallExists = (sLeft.read() + sensorOffsetLeft < length);
+	lvar.frontWallExists = (sFront.read() + sensorOffsetFront < length);
 	if (!lvar.leftWallExists) {
 		movementlib.rotate_encoders(speed, pi / 2);
-		movementlib.move_correction(speed, 0, sLeft, sFront);
+		movementlib.move_correction_sensors(speed, 0, kp, kd, ki, sLeft, sRight, sFront);
 		return;
 	} else {
 		if (lvar.frontWallExists) {
 			movementlib.rotate_encoders(speed, -pi / 2);
 			return;
 		} else {
-			movementlib.move_correction(speed, 0, sLeft, sFront);
+			movementlib.move_correction_sensors(speed, 0, kp, kd, ki, sLeft, sRight, sFront);
 			return;
 		}
 	}
@@ -771,30 +1013,50 @@ movementlib.iterate_lefthand = function(speed, sLeft, sFront) {
 
 /*
 Movement with known path.
-
 path - array of cell indexes
 sRight - can be undefined (if you don't have one)
 */
-movementlib.move_path = function(speed, path, mazesizeX, mazesizeY, sLeft, sFront, sRight, kp, kd) {
+movementlib.move_path = function(speed, path, mazesizeX, mazesizeY, sLeft, sRight, sFront, kp, kd, ki) {
 	if (kp == undefined)
 		kp = 0.1
 	if (kd == undefined)
 		kd = 0.1
+	if (ki == undefined)
+		ki = 0.1
 	var lvar = {}
 	path = path.reverse();
+	var initPos = trikTaxi.getPos(path[0], mazesizeX, mazesizeY);
+	//TODO: ADD MOVEMENT TO THE START POS AND REMOVE THE CODE BELOW
+	odometriya.x = initPos[0] * length;
+	odometriya.y = -initPos[1] * length;
 	for (i = 0; i < path.length - 1; i++) {
-		var curpos = trikTaxi.getPos(path[i], mazesizeX, mazesizeY);
+		//var curpos = trikTaxi.getPos(path[i], mazesizeX, mazesizeY);
+		var curpos = [odometriya.x / length, odometriya.y / length];
+		//print(curpos);
 		var nextpos = trikTaxi.getPos(path[i + 1], mazesizeX, mazesizeY);
+		nextpos[1] = -nextpos[1];
 		var delta = [nextpos[0] - curpos[0], nextpos[1] - curpos[1]];
-		var angle = Math.atan2(-delta[1], delta[0]);
+		var angle = Math.atan2(delta[1], delta[0]);
+		//print(angle);
 		var delta_angle = -odometriya.teta + angle;
-		movementlib.rotate_encoders(speed, delta_angle);
-		movementlib.move_semicorrection(speed, movementlib.cellsize, kp, kd, irLeftSensor, irRightSensor);
+		print(delta, " ", delta_angle, " ", angle);
+		movementlib.rotate_encoders(speed * 0.8, delta_angle);
+		//movementlib.move_semicorrection_sensors(speed, length, kp, kd, ki, sLeft, sRight, sFront);
+		//movementlib.move_correction(speed, length, kp, kd, ki);
+		movementlib.move_encoders(speed, length)
 	}
 }
 
+//##################
+//REGION END
+//##################
 
 
+//##################
+//REGION: TrikTaxi (Path Construction)
+//##################
+//This code requiers:
+//-
 /*
 Usage:
 1) Create the maze matrix
@@ -986,14 +1248,157 @@ trikTaxi.astar = function (start, end, maze, xsize, ysize) {
     }
     return []
 }
+//##################
+//REGION END
+//##################
 
+//##################
+//REGION DISPLAY
+//##################
 
+var display = {}
 
-var main = function()
-{
-	var __interpretation_started_timestamp__ = Date.now();
-	script.wait(2000);
+display.print = function(text, x, y) {
+	if (x == undefined || y == undefined) {
+		x = 10;
+		y = 10;
+	}
+	brick.display().addLabel(text, x, y);
+	brick.display().redraw();
+}
+
+//##################
+//REGION END
+//##################
+
+//##################
+//REGION POLLING
+//##################
+//This code requiers:
+//Header
+var polling = {}
+
+//Local variables (Don't touch)
+polling.log = [] //server-only TODO
+
+polling.onMessage = function (sender, msg) {
+    if (msg.length > 0) {
+        if (mailbox.myHullNumber == 0) {
+            var packet = {};
+            packet.time = Date.now();
+            packet.msg = msg;
+            packet.hullid = sender;
+            polling.log.push(packet);
+        }
+        if (msg[0] == "#") {
+            var result = eval(msg.slice(1, msg.length));
+            mailbox.send(0, "$" + result);
+        }
+        if (msg[0] == "$" && mailbox.myHullNumber() == 0) { //from client to server - cmd finished
+            controllers[sender].status = 0;
+            controllers[sender].callback = msg.slice(1, msg.length);
+        }
+    }
+}
+
+/*
+Call this method on init. 
+When the message recieved onMessageEvent will be called.
+*/
+polling.start = function() {
+	//if (mailbox.myHullNumber() != 0) //Main controller
+        mailbox.connect(controllers[0].ip);
+    mailbox.newMessage.connect(polling.onMessage);
+}
+
+/*
+Call instead of mailbox.send();
+*/
+polling.send = function (hull, text) {
+    if (text == "")
+        return;
+    mailbox.send(hull, text);
+    if (mailbox.myHullNumber() == 0 && text[0] == "#") {
+        controllers[hull].status = 1;
+    }
+}
+
+/*
+Returns are all the robots finished the cmds
+*/
+polling.ready = function() {
+	for (var i = 1; i < controllers.length; i++) {
+		if (controllers[i].status == 1)
+			return false;
+	}
+	return true;
+}
+//##################
+//REGION END
+//##################
+
+var main = function() {
+	script.wait(10);
+	
+	/*
 	odometriya.Start();
+	polling.start();
+	if (mailbox.myHullNumber() == 0) {
+		polling.send(1, "#movementlib.move_encoders(100, 10);");
+		//polling.send(1, "#Date.now();");
+		//polling.send(1, "#move_encoders(100, 69);");
+		//polling.send(2, "#eLeft.read();");
+		while (controllers[1].status == 1 ||
+		   controllers[2].status == 1) {
+			   script.wait(1);
+		   }
+		   polling.send(1, "#movementlib.distance;");
+		   		while (controllers[1].status == 1 ||
+		   controllers[2].status == 1) {
+			   script.wait(1);
+		   }
+		print("finished! Controller 1 value: " + controllers[1].callback)
+   } else {
+	   while(true) {
+		   display.print(odometriya.distance);
+		   print(eLeft.read());
+		   script.wait(1);
+	   }
+   }
+   */
+   //odometriya.Start();
+   
+   	trikTaxi.walls = ["3, 11", "10, 11", "18, 19", "16, 24", "26, 27", "27, 35", "39, 47", "40, 48", "53, 61"]
+	var maze = [1, 1, 1, 1, 1, 1, 0, 1,
+		    1, 0, 1, 1, 0, 1, 1, 1,
+		    1, 1, 1, 1, 1, 1, 0, 1,
+		    1, 0, 1, 1, 0, 1, 1, 1,
+		    1, 1, 1, 1, 1, 1, 0, 1,
+		    1, 0, 1, 0, 1, 1, 1, 1,
+		    1, 1, 1, 1, 0, 1, 0, 1,
+		    1, 0, 1, 1, 1, 1, 1, 1]
+	path = trikTaxi.astar(63, 0, maze, 8, 8);
 
-	return;
+	script.wait(100);
+	
+	odometriya.Start();
+	movementlib.start();
+	
+	//movementlib.initCorrect(15, irLeftSensor, irRightSensor, uzFrontSensor);
+	
+	//movementlib.rotate_encoders(70, pi / 2);
+	//movementlib.move_path(50, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 4, 0.5, 0);
+	movementlib.move_correction(50, 300, 50, 1, 0);
+
+	//movementlib.rotate_encoders(70, pi * 4);
+	//print(odometriya.teta / pi);
+	//return;
+   //while (true) {
+	//movementlib.iterate_lefthand(60, irLeftSensor, irRightSensor, uzFrontSensor, 7, 0, 0.2);
+	//print(odometriya.x / length, " ", odometriya.y / length, " ", odometriya.teta);
+	//script.wait(1);
+	//}
+   //movementlib.move_correction(50, 7 * 40, 1, 1);
+	
+   
 }
