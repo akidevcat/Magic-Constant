@@ -4,7 +4,17 @@
 /*
 	How to use:
 	    var artag_obj = new artag();
-	    var code = artag_obj.get_code();
+		
+		while(true)
+		{
+			code = artag_obj.get_code();
+			if(code != "repeat")
+			{
+				break;
+			}
+			*some movings*
+		}
+		*using of code*
 */
 
 
@@ -674,7 +684,7 @@ function full_area_alternative_search_of_vertexes()
 		squares[3][2] = temp_line.get_point_on_line(temp_line.length / 3); // 15
 	}
 
-	function matrix_coords_to_bool() // for known coords we're create result artag matrix
+	function matrix_coords_to_bool() // we're create result artag matrix for known coords
 	{
 		var now_x;
 		var now_y;
@@ -728,6 +738,7 @@ function full_area_alternative_search_of_vertexes()
 	
 	function artag_decode()
 	{
+		print("result_matrix: ", result_matrix);
 		// verify the number of checking bits
 		
 		var sum = 0;
@@ -741,9 +752,10 @@ function full_area_alternative_search_of_vertexes()
 		}
 		if(sum != 3)
 		{
+			print("returned not a number");
 			return "not a number";
 		}
-		
+		print("sum: ", sum);
 		
 		// rotating result_matrix to base view
 		
@@ -779,6 +791,11 @@ function full_area_alternative_search_of_vertexes()
 				}
 			}
 		}
+		else
+		{
+			completed_matrix = result_matrix;
+		}
+		print("completed_matrix: ", completed_matrix);
 		
 		
 		// two dimensional completed_matrix to Hamming's code
@@ -791,6 +808,7 @@ function full_area_alternative_search_of_vertexes()
 			{
 				if((x == 0 && y == 0) || (x == 0 && y == 3) || (x == 3 && y == 0) || (x == 3 && y == 3))
 				{
+					print("pass");
 					continue;
 				}
 				hamm_code.push(completed_matrix[y][x]);
@@ -798,13 +816,46 @@ function full_area_alternative_search_of_vertexes()
 		}
 		print("hamm_code: ", hamm_code);
 		
-		// verify with checking bits TODO: write that
+		// parity checking of bits
 		
+		// first 
+		if(hamm_code[0] != (hamm_code[2] + hamm_code[4] + hamm_code[6] + hamm_code[8] + hamm_code[10]) % 2)
+		{
+			print("hamm_code returned not a number");
+			return "not a number";
+		}
 		
+		//second
+		if(hamm_code[1] != (hamm_code[2] + hamm_code[5] + hamm_code[6] + hamm_code[9] + hamm_code[10]) % 2)
+		{
+			print("hamm_code returned not a number");
+			return "not a number";
+		}
+		
+		//fourth
+		if(hamm_code[3] != (hamm_code[4] + hamm_code[5] + hamm_code[6] + hamm_code[11]) % 2)
+		{
+			print("hamm_code returned not a number");
+			return "not a number";
+		}
+		
+		//eighth
+		if(hamm_code[7] != (hamm_code[8] + hamm_code[9] + hamm_code[10] + hamm_code[11]) % 2)
+		{
+			print("hamm_code returned not a number");
+			return "not a number";
+		}
+		
+		var n = hamm_code[2] * 2 + hamm_code[4];
+		var x = hamm_code[5] * 4 + hamm_code[6] * 2 + hamm_code[8];
+		var y = hamm_code[9] * 4 + hamm_code[10] * 2 + hamm_code[11];
+		
+		return [x, y, n];
 	}
 
 	this.get_code = function()
 	{
+		// video from camera to display below
 		/*
 		brick.configure("video2", "lineSensor");
 		brick.lineSensor("video2").init(true);
@@ -843,6 +894,8 @@ function full_area_alternative_search_of_vertexes()
 		}
 		else
 		{
+			print("borders isn't clear")
+			print_matrix(pic);
 			return "repeat";
 		}
 		
