@@ -5,7 +5,16 @@ controllers[1].name = "trik-f657a8"
 controllers[2].name = "trik-67ae70"
 controllers[0].ip = "192.168.77.1"
 controllers[1].ip = "192.168.77.204"
-controllers[2].ip = "192.168.77.221" 
+controllers[2].ip = "192.168.77.221"
+controllers[2].kp = 1.1;
+controllers[2].kd = 0.5;
+controllers[2].ki = 0;
+controllers[0].cprl = 392;
+controllers[0].cprr = 392;
+controllers[1].cprl = 366;
+controllers[1].cprr = 326;
+controllers[2].cprl = 394;
+controllers[2].cprr = 394; 
 /*
 Status:
 0 - finished
@@ -29,10 +38,12 @@ var mLeft = brick.motor(M2).setPower; // Default left motor in 2D simulator
 var mRight = brick.motor(M1).setPower; // Default right motor in 2D simulator
 var mLeftGet = brick.motor(M2).power; // Default left motor in 2D simulator
 var mRightGet = brick.motor(M1).power; // Default right motor in 2D simulator
-var cpr = 385 // Encoder's count per round of wheel //274 or 385
-var cprLeft = 374;
-var cprRight = 385;
+var cpr = 345 // Encoder's count per round of wheel //350
+var cpr0 = 394;
 var cprToDeg = 360/cpr;
+var kp2 = 1.1;
+var kd2 = 0.5;
+var ki2 = 0;
 
 // Encoders
 var eLeft = brick.encoder(E2); // Default left encoder in 2D simulator
@@ -651,9 +662,12 @@ odometriya.Update = function() {
 	lvar.deltaleft = lvar.rawleft - odometriya.lastrawleft;
 	lvar.deltaright = lvar.rawright - odometriya.lastrawright;
 	
-	lvar.vleft = pi * d * (lvar.deltaleft / cpr) / lvar.deltat;
-	lvar.vright = pi * d * (lvar.deltaright / cpr) / lvar.deltat;
-
+	//lvar.vleft = pi * d * (lvar.deltaleft / cpr) / lvar.deltat;
+	//lvar.vright = pi * d * (lvar.deltaright / cpr) / lvar.deltat;
+	lvar.vleft = pi * d * (lvar.deltaleft / controllers[mailbox.myHullNumber()].cprl) / lvar.deltat;
+	lvar.vright = pi * d * (lvar.deltaright / controllers[mailbox.myHullNumber()].cprr) / lvar.deltat;
+	print(mailbox.myHullNumber());
+	
 	lvar.v = (lvar.vleft + lvar.vright) / 2;
 	lvar.w = (lvar.vright - lvar.vleft) / l;
 	
@@ -703,7 +717,8 @@ movementlib.cellsize = 40
 //kp recommended: = 2.5
 //kd recommended: = 0.1
 movementlib.correctiondelay = 5
-movementlib.sensorscorrectiondelay = 5
+movementlib.sensorscorrectiondelay = 50
+movementlib.correctionthreshold = 23;
 movementlib.updatedelay = 5
 
 //Local variables (don't TOUCH111)
@@ -712,7 +727,7 @@ movementlib.mLeftValue = 0
 movementlib.mRightValue = 0
 movementlib.mTargetLeft = 0
 movementlib.mTargetRight = 0
-movementlib.lerp = 0.04
+movementlib.lerp = 0.1
 
 movementlib.update = function() {
 	movementlib.mLeftValue = movementlib.mLeftValue + movementlib.lerp * movementlib.updatedelay * (movementlib.mTargetLeft - movementlib.mLeftValue);
@@ -791,6 +806,48 @@ movementlib.rotate_encoders = function(speed, angle) {
 		//var vel = Math.max(0.8, Math.min(deltaAngle, 1 - deltaAngle) * 2); //max in the middle
 		//movementlib.mleft(speed);
 		//movementlib.mright(-speed);
+		script.wait(1);
+	}
+	//movementlib.mleft(0);
+	//movementlib.mright(0);
+	//mLeft(0);
+	//mRight(0);
+	movementlib.mleftforce(0);
+	movementlib.mrightforce(0);
+}
+
+movementlib.rotate_encoderssmooth = function(speed, angle) {
+	var lvar = {}
+	if (angle == 0) {
+		return;
+	}
+	lvar.initialAngle = odometriya.teta;
+	if (angle > 0) {
+		lvar.initLeft = -speed;
+		lvar.initRight = speed;
+		//movementlib.mleft(-speed);
+		//movementlib.mright(speed);
+		//mLeft(-speed)
+		//mRight(speed)
+	} else {
+		//mLeft(speed);
+		//mRight(-speed);
+		lvar.initLeft = speed;
+		lvar.initRight = -speed;
+		//movementlib.mleft(speed);
+		//movementlib.mright(-speed);
+	}
+	
+	while (true) {
+		if ((angle > 0 && (odometriya.teta - lvar.initialAngle) >= angle) || 
+			(angle < 0 && (odometriya.teta - lvar.initialAngle) <= angle)) { break; }
+		if (movementlib.flStop) break;
+		var progress = (odometriya.teta - lvar.initialAngle) / angle; //0 - 1
+		var progressD = Math.min(progress, 1 - progress) * 1.7;
+		var velPower = Math.max(progressD, 0.3);
+		//print(velPower);
+		movementlib.mleftforce(lvar.initLeft * velPower);
+		movementlib.mrightforce(lvar.initRight * velPower);
 		script.wait(1);
 	}
 	//movementlib.mleft(0);
@@ -936,7 +993,7 @@ movementlib.move_correction_sensors = function(speed, distance, kp, kd, ki, sLef
 		if (movementlib.flStop) break;
 		lvar.dt =  movementlib.sensorscorrectiondelay / 1000;
 		lvar.leftWallDistance = sLeft.read() + sensorOffsetLeft;
-		lvar.leftWallDistance = Math.min(lvar.leftWallDistance, length);
+		lvar.leftWallDistance = Math.min(lvar.leftWallDistance, movementlib.correctionthreshold);
 		lvar.error = lvar.leftWallDistance - length / 2;
 		lvar.integral = lvar.integral + lvar.error * lvar.dt;
 		lvar.derative = (lvar.error - lvar.perror) / lvar.dt;
@@ -986,6 +1043,64 @@ movementlib.move_semicorrection_sensors = function(speed, distance, kp, kd, ki, 
 	movementlib.mright(0);
 }
 
+movementlib.move_doublecorrection = function(speed, distance, kp, kd, ki, sLeft, sRight, sFront) {
+	var lvar = {}
+	lvar.initialDistance = odometriya.distance;
+	lvar.initT = odometriya.teta;
+	lvar.perror = 0;
+	lvar.integral = 0;
+	while ((distance == 0 && (sFront.read() + sensorOffsetFront > length / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
+		if (movementlib.flStop) break;
+		if (sFront != undefined && sFront.read() + sensorOffsetFront < length / 1.5) break;
+		lvar.dt =  movementlib.sensorscorrectiondelay / 1000;
+		lvar.leftWallDistance = sLeft.read() + sensorOffsetLeft;
+		lvar.rightWallDistance = sRight.read() + sensorOffsetLeft;
+		lvar.leftWallDistance = Math.min(lvar.leftWallDistance, movementlib.correctionthreshold + sensorOffsetLeft);
+		lvar.rightWallDistance = Math.min(lvar.rightWallDistance, movementlib.correctionthreshold + sensorOffsetLeft);
+		lvar.leftWallExists = (lvar.leftWallDistance != movementlib.correctionthreshold + sensorOffsetLeft);
+		lvar.rightWallExists = (lvar.rightWallDistance != movementlib.correctionthreshold + sensorOffsetLeft);
+		
+		//lvar.wallDistance = lvar.leftWallDistance <= lvar.rightWallDistance ? lvar.leftWallDistance : (length - lvar.rightWallDistance);
+		lvar.wallDistance = 0;
+		if (lvar.leftWallExists)
+			lvar.wallDistance += lvar.leftWallDistance;
+		if (lvar.rightWallExists) {
+			if (lvar.wallDistance == 0) {
+				lvar.wallDistance += (length - lvar.rightWallDistance);
+			} else {
+				lvar.wallDistance += (length - lvar.rightWallDistance);
+				lvar.wallDistance /= 2;
+			}
+		}
+		//lvar.wallDistance = (lvar.leftWallDistance + length - lvar.rightWallDistance) / 2;
+		
+		//print("left: " + lvar.leftWallDistance, " right: " + lvar.rightWallDistance);
+		//print("leftraw: " + sLeft.read(), " rightraw: " + sRight.read());
+		
+		//print(lvar.wallDistance + " " + lvar.leftWallDistance + " " + lvar.rightWallDistance);
+		
+		if (!lvar.leftWallExists && !lvar.rightWallExists) {
+			//encoders correction
+			//print("ENCODERS!");
+			lvar.error = (lvar.initT - odometriya.teta);
+		} else {
+			//sensors correction
+			//print("SENSORS!");
+			lvar.error = lvar.wallDistance - length / 2;
+		}
+		
+		lvar.integral = lvar.integral + lvar.error * lvar.dt;
+		lvar.derative = (lvar.error - lvar.perror) / lvar.dt;
+		lvar.correction = lvar.error * kp + lvar.derative * kd + lvar.integral * ki;
+		movementlib.mleft(speed - lvar.correction);
+		movementlib.mright(speed + lvar.correction);
+		lvar.perror = lvar.error;
+		script.wait(movementlib.sensorscorrectiondelay);
+	}
+	movementlib.mleft(0);
+	movementlib.mright(0);
+}
+
 /*
 One left-hand movement iteration. Just call it inside a loop.
 sLeft is the left sensor. sFront is the front sensor.
@@ -997,12 +1112,12 @@ movementlib.iterate_lefthand = function(speed, sLeft, sRight, sFront, kp, kd, ki
 	lvar.leftWallExists = (sLeft.read() + sensorOffsetLeft < length);
 	lvar.frontWallExists = (sFront.read() + sensorOffsetFront < length);
 	if (!lvar.leftWallExists) {
-		movementlib.rotate_encoders(speed, pi / 2);
+		movementlib.rotate_encoderssmooth(speed, pi / 2);
 		movementlib.move_correction_sensors(speed, 0, kp, kd, ki, sLeft, sRight, sFront);
 		return;
 	} else {
 		if (lvar.frontWallExists) {
-			movementlib.rotate_encoders(speed, -pi / 2);
+			movementlib.rotate_encoderssmooth(speed, -pi / 2);
 			return;
 		} else {
 			movementlib.move_correction_sensors(speed, 0, kp, kd, ki, sLeft, sRight, sFront);
@@ -1026,24 +1141,67 @@ movementlib.move_path = function(speed, path, mazesizeX, mazesizeY, sLeft, sRigh
 	var lvar = {}
 	path = path.reverse();
 	var initPos = trikTaxi.getPos(path[0], mazesizeX, mazesizeY);
-	//TODO: ADD MOVEMENT TO THE START POS AND REMOVE THE CODE BELOW
 	odometriya.x = initPos[0] * length;
 	odometriya.y = -initPos[1] * length;
+	var lastTeta = odometriya.teta;
 	for (i = 0; i < path.length - 1; i++) {
-		//var curpos = trikTaxi.getPos(path[i], mazesizeX, mazesizeY);
-		var curpos = [odometriya.x / length, odometriya.y / length];
-		//print(curpos);
+		var curpos = trikTaxi.getPos(path[i], mazesizeX, mazesizeY);
 		var nextpos = trikTaxi.getPos(path[i + 1], mazesizeX, mazesizeY);
-		nextpos[1] = -nextpos[1];
 		var delta = [nextpos[0] - curpos[0], nextpos[1] - curpos[1]];
-		var angle = Math.atan2(delta[1], delta[0]);
-		//print(angle);
-		var delta_angle = -odometriya.teta + angle;
+		var angle = Math.atan2(-delta[1], delta[0]);
+		var delta_angle = angle - lastTeta;
 		print(delta, " ", delta_angle, " ", angle);
-		movementlib.rotate_encoders(speed * 0.8, delta_angle);
+		movementlib.rotate_encoderssmooth(speed * 0.75, delta_angle);
+		movementlib.move_doublecorrection(speed, length, kp, kd, ki, sLeft, sRight, sFront);
 		//movementlib.move_semicorrection_sensors(speed, length, kp, kd, ki, sLeft, sRight, sFront);
 		//movementlib.move_correction(speed, length, kp, kd, ki);
-		movementlib.move_encoders(speed, length)
+		//movementlib.move_encoders(speed, length)
+		lastTeta = angle;
+	}
+}
+
+movementlib.move_pathcorrection = function(speed, path, mazesizeX, mazesizeY, sLeft, sRight, sFront, kp, kd, ki) {
+	if (kp == undefined)
+		kp = 0.1
+	if (kd == undefined)
+		kd = 0.1
+	if (ki == undefined)
+		ki = 0.1
+	var lvar = {}
+	path = path.reverse();
+	var initPos = trikTaxi.getPos(path[0], mazesizeX, mazesizeY);
+	odometriya.x = initPos[0] * length;
+	odometriya.y = -initPos[1] * length;
+	var lastTeta = odometriya.teta;
+	var xline = undefined;
+	var yline = undefined;
+	for (i = 0; i < path.length - 1; i++) {
+		var curpos = trikTaxi.getPos(path[i], mazesizeX, mazesizeY);
+		var nextpos = trikTaxi.getPos(path[i + 1], mazesizeX, mazesizeY);
+		xline = true;
+		yline = true;
+		var jlast = curpos;
+		var jlastindex = i;
+		for (var j = i + 1; j < path.length && (xline || yline); j++) {
+			var jpos = trikTaxi.getPos(path[j], mazesizeX, mazesizeY);
+			if (jpos[0] != jlast[0])
+				xline = false;
+			if (jpos[1] != jlast[1])
+				yline = false;
+			if (xline || yline) {
+				jlast = jpos;
+				jlastindex = j;
+			}
+		}
+		nextpos = jlast;
+		var delta = [nextpos[0] - curpos[0], nextpos[1] - curpos[1]];
+		print(delta + " " + jlastindex + " " + jpos);
+		var angle = Math.atan2(-delta[1], delta[0]);
+		var delta_angle = angle - lastTeta;
+		movementlib.rotate_encoderssmooth(speed, delta_angle);
+		movementlib.move_doublecorrection(speed, length * (Math.abs(delta[0]) + Math.abs(delta[1])), kp, kd, ki, sLeft, sRight, sFront);
+		lastTeta = angle;
+		i = jlastindex - 1;
 	}
 }
 
@@ -1366,9 +1524,7 @@ var main = function() {
 	   }
    }
    */
-   //odometriya.Start();
-   
-   	trikTaxi.walls = ["3, 11", "10, 11", "18, 19", "16, 24", "26, 27", "27, 35", "39, 47", "40, 48", "53, 61"]
+   	trikTaxi.walls = ["3, 11", "10, 11", "15, 23", "18, 19", "16, 24", "26, 27", "27, 35", "39, 47", "40, 48", "53, 61"]
 	var maze = [1, 1, 1, 1, 1, 1, 0, 1,
 		    1, 0, 1, 1, 0, 1, 1, 1,
 		    1, 1, 1, 1, 1, 1, 0, 1,
@@ -1377,28 +1533,24 @@ var main = function() {
 		    1, 0, 1, 0, 1, 1, 1, 1,
 		    1, 1, 1, 1, 0, 1, 0, 1,
 		    1, 0, 1, 1, 1, 1, 1, 1]
-	path = trikTaxi.astar(63, 0, maze, 8, 8);
+	path = trikTaxi.astar(58, 47, maze, 8, 8);
 
 	script.wait(100);
 	
 	odometriya.Start();
 	movementlib.start();
 	
-	//movementlib.initCorrect(15, irLeftSensor, irRightSensor, uzFrontSensor);
+	while (true) {
+		movementlib.iterate_lefthand(70, irLeftSensor, irRightSensor, uzFrontSensor, 10, 3, 50);
+		script.wait(1);
+	}
+	//movementlib.move_doublecorrection(60, 0, 1.1, 0.45, 0, irLeftSensor, irRightSensor, uzFrontSensor)
+	//movementlib.move_correction(70, length * 3, 50, 5, 0);
+	//movementlib.rotate_encoderssmooth(70, 2 * pi);
+	return;
 	
-	//movementlib.rotate_encoders(70, pi / 2);
-	//movementlib.move_path(50, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 4, 0.5, 0);
-	movementlib.move_correction(50, 300, 50, 1, 0);
-
-	//movementlib.rotate_encoders(70, pi * 4);
-	//print(odometriya.teta / pi);
-	//return;
-   //while (true) {
-	//movementlib.iterate_lefthand(60, irLeftSensor, irRightSensor, uzFrontSensor, 7, 0, 0.2);
-	//print(odometriya.x / length, " ", odometriya.y / length, " ", odometriya.teta);
-	//script.wait(1);
-	//}
-   //movementlib.move_correction(50, 7 * 40, 1, 1);
-	
-   
+	pt = trikTaxi.astar(7, 56, maze, 8, 8);
+	movementlib.move_pathcorrection(70, pt, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1.1, 0.4, 0);
+	//movementlib.move_doublecorrection(70, 0, 1, 0.25, 0, irLeftSensor, irRightSensor, uzFrontSensor);
+	return;
 }
