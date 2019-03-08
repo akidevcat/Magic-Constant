@@ -38,7 +38,7 @@ var mLeft = brick.motor(M2).setPower; // Default left motor in 2D simulator
 var mRight = brick.motor(M1).setPower; // Default right motor in 2D simulator
 var mLeftGet = brick.motor(M2).power; // Default left motor in 2D simulator
 var mRightGet = brick.motor(M1).power; // Default right motor in 2D simulator
-var cpr = 345 // Encoder's count per round of wheel //350
+var cpr = 374; // Encoder's count per round of wheel //350
 var cpr0 = 394;
 var cprToDeg = 360/cpr;
 var kp2 = 1.1;
@@ -615,7 +615,7 @@ odometriya.rDistance = 0
 odometriya.teta = 0 //90* = pi / 2; 180* = pi; 270* = 1.5 * pi; 360* = 2 * pi
 //This is the delay between iterations inside the main loop (<Your MS Delay> / 1000)
 //If this value is 0 then it'll be calculated automatically (!but less accurate!)
-odometriya.deltat = 10 / 1000
+odometriya.deltat = 0 / 1000
 odometriya.updatedelay = 10
 
 //These are the local ones (don't edit them):
@@ -664,9 +664,8 @@ odometriya.Update = function() {
 	
 	//lvar.vleft = pi * d * (lvar.deltaleft / cpr) / lvar.deltat;
 	//lvar.vright = pi * d * (lvar.deltaright / cpr) / lvar.deltat;
-	lvar.vleft = pi * d * (lvar.deltaleft / controllers[mailbox.myHullNumber()].cprl) / lvar.deltat;
-	lvar.vright = pi * d * (lvar.deltaright / controllers[mailbox.myHullNumber()].cprr) / lvar.deltat;
-	print(mailbox.myHullNumber());
+	lvar.vleft = pi * d * (lvar.deltaleft / cpr) / lvar.deltat;
+	lvar.vright = pi * d * (lvar.deltaright / cpr) / lvar.deltat;
 	
 	lvar.v = (lvar.vleft + lvar.vright) / 2;
 	lvar.w = (lvar.vright - lvar.vleft) / l;
@@ -718,7 +717,7 @@ movementlib.cellsize = 40
 //kd recommended: = 0.1
 movementlib.correctiondelay = 5
 movementlib.sensorscorrectiondelay = 50
-movementlib.correctionthreshold = 23;
+movementlib.correctionthreshold = length / 1.5;
 movementlib.updatedelay = 5
 
 //Local variables (don't TOUCH111)
@@ -862,11 +861,13 @@ movementlib.rotate_encoderssmooth = function(speed, angle) {
 Angle - rad
 */
 movementlib.rotate_absolute = function(speed, angle) {
-	var lvar = {}
-	if (angle == 0) {
-		return;
-	}
-	lvar.delta_angle = -odometriya.teta + angle;
+	var delta_angle = -odometriya.teta + angle;
+	movementlib.rotate_encoders(speed, delta_angle);
+}
+
+movementlib.look_at = function(speed, x, y) {
+	var delta = [x - odometriya.x, y - odometriya.y];
+	var delta_angle = -odometriya.teta + Math.atan2(delta[1], delta[0]);
 	movementlib.rotate_encoders(speed, delta_angle);
 }
 
@@ -897,19 +898,19 @@ movementlib.initCorrect = function(speed, sLeft, sRight, sFront) {
 	var sCorrector = undefined;
 	if (leftD != length) {
 		//Correct using the left one
-		print("Left");
+		//print("Left");
 		initD = leftD;
 		sCorrector = sLeft;
 		
 	} else if (frontD != length) {
 		//Correct using the front one;
-		print("Front");
+		//print("Front");
 		initD = frontD;
 		sCorrector = sFront;
 		
 	} else if (rightD != length) {
 		//Correct using the right one
-		print("Right");
+		//print("Right");
 		initD = rightD;
 		sCorrector = sRight;
 		
@@ -920,7 +921,7 @@ movementlib.initCorrect = function(speed, sLeft, sRight, sFront) {
 	var lastD = Infinity;
 	
 	while(sCorrector.read() <= lastD) {
-		print("First: " + sCorrector.read());
+		//print("First: " + sCorrector.read());
 		movementlib.mleft(speed);
 		movementlib.mright(-speed);
 		lastD = sCorrector.read();
@@ -933,7 +934,7 @@ movementlib.initCorrect = function(speed, sLeft, sRight, sFront) {
 		lastD = Infinity;
 		
 		while(sCorrector.read() <= lastD) {
-			print("Second: " + sCorrector.read());
+			//print("Second: " + sCorrector.read());
 			movementlib.mleft(-speed);
 			movementlib.mright(speed);
 			lastD = sCorrector.read();
@@ -967,7 +968,7 @@ movementlib.move_correction = function(speed, distance, kp, kd) {
 		lvar.x = odometriya.x - lvar.initX;
 		//lvar.error = -Math.cos(lvar.initT) * (lvar.y - Math.tan(lvar.initT) * lvar.x);
 		lvar.error = (lvar.initT - odometriya.teta);
-		print(lvar.error);
+		//print(lvar.error);
 		lvar.integral = lvar.integral + lvar.error * lvar.dt;
 		lvar.derative = (lvar.error - lvar.perror) / lvar.dt;
 		lvar.correction = lvar.error * kp + lvar.derative * kd;
@@ -989,7 +990,7 @@ movementlib.move_correction_sensors = function(speed, distance, kp, kd, ki, sLef
 	lvar.initialDistance = odometriya.distance;
 	lvar.perror = 0;
 	lvar.integral = 0;
-	while ((distance == 0 && (sFront.read() + sensorOffsetFront > length / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
+	while ((distance == 0 && (sFront.read() + sensorOffsetFront > length / 3)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
 		if (movementlib.flStop) break;
 		lvar.dt =  movementlib.sensorscorrectiondelay / 1000;
 		lvar.leftWallDistance = sLeft.read() + sensorOffsetLeft;
@@ -1051,7 +1052,7 @@ movementlib.move_doublecorrection = function(speed, distance, kp, kd, ki, sLeft,
 	lvar.integral = 0;
 	while ((distance == 0 && (sFront.read() + sensorOffsetFront > length / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
 		if (movementlib.flStop) break;
-		if (sFront != undefined && sFront.read() + sensorOffsetFront < length / 1.5) break;
+		if (sFront != undefined && sFront.read() + sensorOffsetFront < length / 2) break;
 		lvar.dt =  movementlib.sensorscorrectiondelay / 1000;
 		lvar.leftWallDistance = sLeft.read() + sensorOffsetLeft;
 		lvar.rightWallDistance = sRight.read() + sensorOffsetLeft;
@@ -1072,6 +1073,7 @@ movementlib.move_doublecorrection = function(speed, distance, kp, kd, ki, sLeft,
 				lvar.wallDistance /= 2;
 			}
 		}
+		//print(lvar.leftWallDistance);
 		//lvar.wallDistance = (lvar.leftWallDistance + length - lvar.rightWallDistance) / 2;
 		
 		//print("left: " + lvar.leftWallDistance, " right: " + lvar.rightWallDistance);
@@ -1088,7 +1090,7 @@ movementlib.move_doublecorrection = function(speed, distance, kp, kd, ki, sLeft,
 			//print("SENSORS!");
 			lvar.error = lvar.wallDistance - length / 2;
 		}
-		
+		//print(lvar.error);
 		lvar.integral = lvar.integral + lvar.error * lvar.dt;
 		lvar.derative = (lvar.error - lvar.perror) / lvar.dt;
 		lvar.correction = lvar.error * kp + lvar.derative * kd + lvar.integral * ki;
@@ -1139,18 +1141,56 @@ movementlib.move_path = function(speed, path, mazesizeX, mazesizeY, sLeft, sRigh
 	if (ki == undefined)
 		ki = 0.1
 	var lvar = {}
+	var result = "";
+	
 	path = path.reverse();
+	
+	
 	var initPos = trikTaxi.getPos(path[0], mazesizeX, mazesizeY);
-	odometriya.x = initPos[0] * length;
-	odometriya.y = -initPos[1] * length;
+	//odometriya.x = initPos[0] * length;
+	//odometriya.y = -initPos[1] * length;
 	var lastTeta = odometriya.teta;
+	//print(lastTeta);
 	for (i = 0; i < path.length - 1; i++) {
 		var curpos = trikTaxi.getPos(path[i], mazesizeX, mazesizeY);
 		var nextpos = trikTaxi.getPos(path[i + 1], mazesizeX, mazesizeY);
 		var delta = [nextpos[0] - curpos[0], nextpos[1] - curpos[1]];
+		
+		//delta[0] = -delta[0];
+		//delta[1] = -delta[1];
+		
+		
+		//delta[0] = -delta[0]
+		//delta[1] = -delta[1]
+		
+		
+		
 		var angle = Math.atan2(-delta[1], delta[0]);
 		var delta_angle = angle - lastTeta;
-		print(delta, " ", delta_angle, " ", angle);
+		
+		
+		if (delta_angle > pi)
+			delta_angle = delta_angle - 2 * pi;
+		else if (delta_angle < -pi)
+			delta_angle = 2 * pi + delta_angle;
+		
+		switch (Math.round(delta_angle * 100) / 100) {
+			case 1.57:
+				result += "L";
+				break;
+			case -1.57:
+				result += "R";
+				break;
+			case 3.14:
+				result += "RR";
+				break;
+			case -3.14:
+				result += "LL";
+				break;
+		}
+		
+		//print(delta, " ", delta_angle, " ", angle);
+		result += "F";
 		movementlib.rotate_encoderssmooth(speed * 0.75, delta_angle);
 		movementlib.move_doublecorrection(speed, length, kp, kd, ki, sLeft, sRight, sFront);
 		//movementlib.move_semicorrection_sensors(speed, length, kp, kd, ki, sLeft, sRight, sFront);
@@ -1158,6 +1198,7 @@ movementlib.move_path = function(speed, path, mazesizeX, mazesizeY, sLeft, sRigh
 		//movementlib.move_encoders(speed, length)
 		lastTeta = angle;
 	}
+	return result;
 }
 
 movementlib.move_pathcorrection = function(speed, path, mazesizeX, mazesizeY, sLeft, sRight, sFront, kp, kd, ki) {
@@ -1290,24 +1331,100 @@ maze is a binary array of cells
 xsize, ysize are the maze sizes
 */
 trikTaxi.bfs = function (start, end, maze, xsize, ysize) {
-    open = [start]
-    closed = []
-    tree = new Array(xsize * ysize)
+    var open = [start]
+    var closed = []
+    var tree = new Array(xsize * ysize)
     while (open.length > 0) {
-        x = open.pop();
-
+        var x = open.shift();
         if (x == end) {
             return trikTaxi.reconstructPath(start, end, tree)
         }
 
         if (closed.indexOf(x) == -1 && maze[x]) {
             closed.push(x);
-            neighbors = trikTaxi.getNeighbors(x, xsize, ysize);
+            var neighbors = trikTaxi.getNeighbors(x, xsize, ysize);
             for (i = 0; i < neighbors.length; i++) {
                 if (closed.indexOf(neighbors[i]) == -1 && maze[neighbors[i]]) {
-                    if (tree[neighbors[i]] === undefined)
+                    if (tree[neighbors[i]] == undefined)
                         tree[neighbors[i]] = x
-                    open.push(neighbors[i])
+                    open.push(neighbors[i]);
+                }
+            }
+        }
+    }
+    return []
+} 
+
+trikTaxi.fnilbfs = function (start, arr, maze, xsize, ysize) {
+    var open = [start]
+    var closed = []
+    var tree = new Array(xsize * ysize)
+    while (open.length > 0) {
+        var x = open.shift();
+        if (arr.indexOf(x) == -1) {
+            return trikTaxi.reconstructPath(start, end, tree)
+        }
+
+        if (closed.indexOf(x) == -1 && maze[x]) {
+            closed.push(x);
+            var neighbors = trikTaxi.getNeighbors(x, xsize, ysize);
+            for (i = 0; i < neighbors.length; i++) {
+                if (closed.indexOf(neighbors[i]) == -1 && maze[neighbors[i]]) {
+                    if (tree[neighbors[i]] == undefined)
+                        tree[neighbors[i]] = x
+                    open.push(neighbors[i]);
+                }
+            }
+        }
+    }
+    return []
+} 
+
+trikTaxi.magicbfs = function (start, end, maze, xsize, ysize, startRot) {
+    var open = [start]
+    var closed = []
+    var tree = new Array(xsize * ysize)
+	var rots = new Array(xsize * ysize)
+	rots[start] = startRot;
+    while (open.length > 0) {
+        var x = open.shift();
+        if (x == end) {
+            return trikTaxi.reconstructPath(start, end, tree)
+        }
+
+        if (closed.indexOf(x) == -1 && maze[x]) {
+            closed.push(x);
+            var neighbors = trikTaxi.getNeighbors(x, xsize, ysize);
+			for (i = 0; i < neighbors.length; i++) {
+				
+				var curpos = trikTaxi.getPos(x, xsize, ysize);
+				var nextpos = trikTaxi.getPos(neighbors[i], xsize, ysize);
+				var delta = [nextpos[0] - curpos[0], nextpos[1] - curpos[1]];
+				var angle = Math.atan2(-delta[1], delta[0]);
+				var dir = Math.round(angle / (2 * pi) * 4);
+				if (dir == 4)
+					dir = 0;
+				
+				if (dir == rots[x]) {
+					open.push(neighbors[i]);
+					rots[neighbors[i]] = dir;
+				}
+			}
+            for (i = 0; i < neighbors.length; i++) {
+                if (closed.indexOf(neighbors[i]) == -1 && maze[neighbors[i]]) {
+                    if (tree[neighbors[i]] == undefined)
+                        tree[neighbors[i]] = x
+					
+					var curpos = trikTaxi.getPos(x, xsize, ysize);
+					var nextpos = trikTaxi.getPos(neighbors[i], xsize, ysize);
+					var delta = [nextpos[0] - curpos[0], nextpos[1] - curpos[1]];
+					var angle = Math.atan2(-delta[1], delta[0]);
+					var dir = Math.round(angle / (2 * pi) * 4);
+					if (dir == 4)
+						dir = 0;
+					
+                    open.push(neighbors[i]);
+					rots[neighbors[i]] = dir;
                 }
             }
         }
@@ -1323,22 +1440,22 @@ maze is a binary array of cells
 xsize, ysize are the maze sizes
 */
 trikTaxi.dfs = function (start, end, maze, xsize, ysize) {
-    open = [start]
-    closed = []
-    tree = new Array(xsize * ysize)
+    var open = [start]
+    var closed = []
+    var tree = new Array(xsize * ysize)
     while (open.length > 0) {
-        x = open.pop();
-
+        var x = open.shift();
+	//print(x);
         if (x == end) {
             return trikTaxi.reconstructPath(start, end, tree)
         }
 
         if (closed.indexOf(x) == -1 && maze[x]) {
             closed.push(x);
-            neighbors = trikTaxi.getNeighbors(x, xsize, ysize);
+            var neighbors = trikTaxi.getNeighbors(x, xsize, ysize);
             for (i = 0; i < neighbors.length; i++) {
                 if (closed.indexOf(neighbors[i]) == -1 && maze[neighbors[i]]) {
-                    if (tree[neighbors[i]] === undefined)
+                    if (tree[neighbors[i]] == undefined)
                         tree[neighbors[i]] = x
                     open.push(neighbors[i])
                     break;
@@ -1346,6 +1463,7 @@ trikTaxi.dfs = function (start, end, maze, xsize, ysize) {
             }
         }
     }
+	return [];
 }
 
 /*
@@ -1405,6 +1523,38 @@ trikTaxi.astar = function (start, end, maze, xsize, ysize) {
         }
     }
     return []
+}
+
+trikTaxi.parsePath = function(pth, xSize, ySize, startTeta) {
+	var result = "";
+	var lastTeta = startTeta;
+	var path = pth.reverse();
+	for (var i = 0; i < path.length - 1; i++) {
+		var curpos = trikTaxi.getPos(path[i], xSize, ySize);
+		var nextpos = trikTaxi.getPos(path[i + 1], xSize, ySize);
+		var delta = [nextpos[0] - curpos[0], nextpos[1] - curpos[1]];
+		var angle = Math.atan2(-delta[1], delta[0]);
+		var sign = angle - lastTeta > 0 ? 1 : -1;
+		//var delta_angle = Math.min(Math.abs(angle - lastTeta), 2 * pi - Math.abs(lastTeta - angle)) * sign;
+		var delta_angle = angle - lastTeta;
+		if (delta_angle > pi)
+			delta_angle = delta_angle - 2 * pi;
+		else if (delta_angle < -pi)
+			delta_angle = 2 * pi + delta_angle;
+		var rangle = Math.round(delta_angle * 100) / 100;
+		switch (rangle) {
+			case -1.57:
+				result += "R";
+				break;
+			case 1.57:
+				result += "L";
+				break;
+		}
+		result += "F";
+		lastTeta = angle;
+	}
+	//print(result);
+	return result;
 }
 //##################
 //REGION END
@@ -1495,35 +1645,26 @@ polling.ready = function() {
 //REGION END
 //##################
 
+var rot2teta = function(startRot) {
+	switch (startRot) {
+		case 0:
+			var startTeta = pi / 2;
+			break;
+		case 1:
+			var startTeta = 0;
+			break;
+		case 2:
+			var startTeta = 1.5 * pi;
+			break;
+		case 3:
+			var startTeta = pi;
+			break;
+	}
+	return startTeta;
+}
+
 var main = function() {
-	script.wait(10);
-	
-	/*
-	odometriya.Start();
-	polling.start();
-	if (mailbox.myHullNumber() == 0) {
-		polling.send(1, "#movementlib.move_encoders(100, 10);");
-		//polling.send(1, "#Date.now();");
-		//polling.send(1, "#move_encoders(100, 69);");
-		//polling.send(2, "#eLeft.read();");
-		while (controllers[1].status == 1 ||
-		   controllers[2].status == 1) {
-			   script.wait(1);
-		   }
-		   polling.send(1, "#movementlib.distance;");
-		   		while (controllers[1].status == 1 ||
-		   controllers[2].status == 1) {
-			   script.wait(1);
-		   }
-		print("finished! Controller 1 value: " + controllers[1].callback)
-   } else {
-	   while(true) {
-		   display.print(odometriya.distance);
-		   print(eLeft.read());
-		   script.wait(1);
-	   }
-   }
-   */
+
    	trikTaxi.walls = ["3, 11", "10, 11", "15, 23", "18, 19", "16, 24", "26, 27", "27, 35", "39, 47", "40, 48", "53, 61"]
 	var maze = [1, 1, 1, 1, 1, 1, 0, 1,
 		    1, 0, 1, 1, 0, 1, 1, 1,
@@ -1533,24 +1674,27 @@ var main = function() {
 		    1, 0, 1, 0, 1, 1, 1, 1,
 		    1, 1, 1, 1, 0, 1, 0, 1,
 		    1, 0, 1, 1, 1, 1, 1, 1]
-	path = trikTaxi.astar(58, 47, maze, 8, 8);
-
 	script.wait(100);
 	
 	odometriya.Start();
 	movementlib.start();
 	
-	while (true) {
-		movementlib.iterate_lefthand(70, irLeftSensor, irRightSensor, uzFrontSensor, 10, 3, 50);
-		script.wait(1);
-	}
-	//movementlib.move_doublecorrection(60, 0, 1.1, 0.45, 0, irLeftSensor, irRightSensor, uzFrontSensor)
-	//movementlib.move_correction(70, length * 3, 50, 5, 0);
-	//movementlib.rotate_encoderssmooth(70, 2 * pi);
-	return;
+	var x = 5;
+	var y = 2;
+	var endx = 2;
+	var endy = 2;
+	var rot = 3;
 	
-	pt = trikTaxi.astar(7, 56, maze, 8, 8);
-	movementlib.move_pathcorrection(70, pt, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1.1, 0.4, 0);
-	//movementlib.move_doublecorrection(70, 0, 1, 0.25, 0, irLeftSensor, irRightSensor, uzFrontSensor);
-	return;
+	var cell0 = x + y * 8;
+	var cell1 = endx + endy * 8;
+	var startTeta = rot2teta(rot);
+
+	odometriya.teta = startTeta;
+	var path = trikTaxi.magicbfs(cell0, cell1, maze, 8, 8, startTeta / (2 * pi));
+	movementlib.move_path(70, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1.7, 0.85, 0);
+
+	display.print("finish");
+	while (true) {
+		script.wait(100);
+	}
 }
