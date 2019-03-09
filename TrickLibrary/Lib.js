@@ -1289,7 +1289,7 @@ movementlib.correctiondelay = 5
 movementlib.sensorscorrectiondelay = 50
 //movementlib.correctionthreshold = length / 1.5; //for real
 
-movementlib.correctionthreshold = length / 1.85; //for sim
+movementlib.correctionthreshold = length / 2; //for sim
 movementlib.updatedelay = 5
 
 //Local variables (don't TOUCH111)
@@ -1622,7 +1622,7 @@ movementlib.move_doublecorrection = function(speed, distance, kp, kd, ki, sLeft,
 	lvar.initT = odometriya.teta;
 	lvar.perror = 0;
 	lvar.integral = 0;
-	while ((distance == 0 && (sFront.read() + sensorOffsetFront > length / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
+	while ((distance == 0 && (sFront.read() + sensorOffsetFront > length / 2.35)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
 		if (movementlib.flStop) break;
 		if (sFront != undefined && sFront.read() + sensorOffsetFront < length / 2) break;
 		lvar.dt =  movementlib.sensorscorrectiondelay / 1000;
@@ -1763,7 +1763,7 @@ movementlib.move_path = function(speed, path, mazesizeX, mazesizeY, sLeft, sRigh
 		
 		//print(delta, " ", delta_angle, " ", angle);
 		result += "F";
-		movementlib.rotate_encoderssmooth(speed * 0.75, delta_angle);
+		movementlib.rotate_encoderssmooth(speed, delta_angle);
 		movementlib.move_doublecorrection(speed, length, kp, kd, ki, sLeft, sRight, sFront);
 		//movementlib.move_semicorrection_sensors(speed, length, kp, kd, ki, sLeft, sRight, sFront);
 		//movementlib.move_correction(speed, length, kp, kd, ki);
@@ -1811,6 +1811,10 @@ movementlib.move_pathcorrection = function(speed, path, mazesizeX, mazesizeY, sL
 		print(delta + " " + jlastindex + " " + jpos);
 		var angle = Math.atan2(-delta[1], delta[0]);
 		var delta_angle = angle - lastTeta;
+		if (delta_angle > pi)
+			delta_angle = delta_angle - 2 * pi;
+		else if (delta_angle < -pi)
+			delta_angle = 2 * pi + delta_angle;
 		movementlib.rotate_encoderssmooth(speed, delta_angle);
 		movementlib.move_doublecorrection(speed, length * (Math.abs(delta[0]) + Math.abs(delta[1])), kp, kd, ki, sLeft, sRight, sFront);
 		lastTeta = angle;
@@ -2243,9 +2247,9 @@ var scantag = function(ang) {
 	{
 		code = getARTagValue(getData());
 		if (ang > 0)
-			movementlib.rotate_encoderssmooth(6, pi / 85);
+			movementlib.rotate_encoderssmooth(5, -pi / 80);
 		else
-			movementlib.rotate_encoderssmooth(6, -pi / 85);
+			movementlib.rotate_encoderssmooth(5, pi / 80);
 		script.wait(10);
 		i++;
 	}
@@ -2279,11 +2283,11 @@ var main = function() {
 	//
 	//
 	//
-	var x = 0;
+	var x = 7;
 	var y = 7;
-	var endx = 1;
-	var endy = 4;
-	var rot = 2;
+	var endx = 0;
+	var endy = 0;
+	var rot = 0;
 	var arrot = 2;
 	
 	var cell0 = x + y * 8;
@@ -2292,7 +2296,9 @@ var main = function() {
 
 	odometriya.teta = startTeta;
 	var path = trikTaxi.magicbfs(cell0, cell1, maze, 8, 8, startTeta / (2 * pi));
-	movementlib.move_path(40, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1, 0.5, 0);
+	movementlib.move_pathcorrection(70, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1, 0.85, 0);
+	
+	return;
 	
 	var delta_angle = rot2teta(arrot) - odometriya.teta;
 	if (delta_angle > pi)
@@ -2302,9 +2308,11 @@ var main = function() {
 	movementlib.rotate_encoderssmooth(30, delta_angle);
 	movementlib.move_encoders(-10, 8);
 	if (delta_angle > 0)
-		movementlib.rotate_encoderssmooth(30, pi / 2 * 0.85);
-	else
-		movementlib.rotate_encoderssmooth(30, - pi / 2 * 0.85);
+		movementlib.rotate_encoderssmooth(30, - pi / 2 * 0.8);
+	else {
+		movementlib.rotate_encoderssmooth(30, pi / 2 * 0.8);
+		print("fdfd");
+	}
 	
 	var code = scantag(delta_angle);
 	display.print("(" + code[0] + "," + code[1] + ")" + code[2]);
@@ -2313,32 +2321,32 @@ var main = function() {
 		script.wait(100);
 }
 
-// –азмеры изображени€
+// –?????? ??????????€
 height = 120, width = 160;
 
-// «десь хранитьс€ изображение в виде матрицы нулей и единиц
+// «???? ????????€ ??????????? ? ???? ??????? ????? ? ??????
 image = [];
 
-// «начени€ ARTag маркера
+// «??????€ ARTag ???????
 values = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
 
-// ¬ыделенна€ область с маркером (пр€моугольник)
-// iMin, iMax задают горизонтальные пр€мые
-// jMin, jMax задают вертикальные пр€мые
+// ¬????????€ ??????? ? ???????? (??€??????????)
+// iMin, iMax ?????? ?????????????? ??€???
+// jMin, jMax ?????? ???????????? ??€???
 iMin = 0, iMax = 0, jMin = 0, jMax = 0;
 
-// ¬ыделенна€ область с маркером
+// ¬????????€ ??????? ? ????????
 // 
 // 
 k1Min = 0, k1Max = 0, k2Min = 0, k2Max = 0;
 
-// ”глы ARTag изображени€
+// ”??? ARTag ??????????€
 iA = 0, jA = 0, iB = 0, jB = 0, iC = 0, jC = 0, iD = 0, jD = 0;
 
 //file1 = "9.txt"
 //file2 = "9.clue"
 
-// ѕрочитать картинку
+// ????????? ????????
 function getData(raw) {
 	if (raw == undefined)
 		raw = getPhoto().toString();
@@ -2356,11 +2364,11 @@ function getData(raw) {
 		image[i] = [];
 		for (j = 0; j < width; ++j) {
 			color = raw[i * width + j];
-			// ѕереводим RGB в grayscale
+			// ????????? RGB ? grayscale
 			image[i][j] = ((color & 0xff0000) >> 16) + ((color & 0xff00) >> 8) + (color & 0xff);
 		}
 	}
-	// ќчищаем 
+	// ??????? 
 	for (i = 0; i < height; ++i) {
 		for (j = 0; j < 4; j++){
 			image[i][j] = 255 + 255 + 255;
@@ -2374,13 +2382,13 @@ function getData(raw) {
 				
 	}
 	
-	// ‘икс от просвета снизу (если далеко от стенки)
+	// ‘??? ?? ???????? ????? (???? ?????? ?? ??????)
 	for (i = height - 8; i < height; ++i) 
 		for (j = 0; j < width; ++j)
 			image[i][j] = 255 + 255 + 255;
 }
 
-// јдаптивна€ бинаризаци€, используетс€ среднее арифметическое
+// ?????????€ ??????????€, ???????????€ ??????? ??????????????
 function binarization() {
 	sum = 0;
 	for (i = 0; i < height; ++i)
@@ -2392,23 +2400,23 @@ function binarization() {
 			image[i][j] = (4 * image[i][j] > mean ? 0 : 1);
 }
 
-// ¬ывод изображени€ в консоль
-// ћожно скопировать и просмотреть картинку в Notepad++
+// ¬???? ??????????€ ? ???????
+// ????? ??????????? ? ??????????? ???????? ? Notepad++
 function printImage() {
     for (i = 0; i < height; ++i) {
 		str = "";
         for (j = 0; j < width; ++j)
-			// ¬ывод форматной строкой
-			// 0: белый пиксель
-			// 1: черный пиксель
-			// 2-5: углы ARTag маркера
-			// 6: ключевые точки
+			// ¬???? ????????? ???????
+			// 0: ????? ???????
+			// 1: ?????? ???????
+			// 2-5: ???? ARTag ???????
+			// 6: ???????? ?????
 			str += ".#ABCD*"[image[i][j]] + " ";
         print(str);
     }
 }
 
-// ¬ывод выделенного изображени€ в консоль
+// ¬???? ??????????? ??????????€ ? ???????
 function printSelectedImage() {
 	for (i = iMin; i <= iMax; ++i) {
 		str = "";
@@ -2418,7 +2426,7 @@ function printSelectedImage() {
     }
 }
 
-// ѕоиск углов ARTag маркера
+// ????? ????? ARTag ???????
 function getCorners() {
 	iMin = 0, iMax = 0, jMin = 0, jMax = 0;
 	k1Min = 0, k1Max = 0, k2Min = 0, k2Max = 0;
@@ -2452,8 +2460,8 @@ function getCorners() {
 		return;
 
 	}
-	//  оличество белых пикселей вне маркера, но в выделенной области
-	// Ќужно дл€ определени€ вида маркера: почти пр€мой / под наклоном
+	//  ????????? ????? ???????? ??? ???????, ?? ? ?????????? ???????
+	// ????? ??€ ??????????€ ???? ???????: ????? ??€??? / ??? ????????
 	countOfWhite = 0;
 	for (i = iMin; i <= iMax; ++i) {
 		j = jMin;
@@ -2465,7 +2473,7 @@ function getCorners() {
 				--j, ++countOfWhite;
 		}
 	}
-	// ≈сли ARTag маркер наклонен, ищем углы с боков
+	// ˜??? ARTag ?????? ????????, ???? ???? ? ?????
 	if (countOfWhite * 2 > (iMax - iMin + 1) * (jMax - jMin + 1)) {
 		// Point A
 		i1 = iMin, i2 = iMax;
@@ -2487,7 +2495,7 @@ function getCorners() {
 		while (!image[iMax][j1]) ++j1;
 		while (!image[iMax][j2]) --j2;
 		iD = iMax, jD = round((j1 + j2) / 2);
-	} else { // ≈сли почти пр€мо, ищем углы по диагонал€м
+	} else { // ˜??? ????? ??€??, ???? ???? ?? ????????€?
 		// Point A
 		i1 = iMin, i2 = k1Min - jMin;
 		while (!image[i1][k1Min - i1]) ++i1;
@@ -2509,7 +2517,7 @@ function getCorners() {
 		while (!image[i2][i1 - k2Max]) --i2;
 		iD = round((i1 + i2) / 2), jD = iD - k2Max;
 	}
-	// –аскомментировать, если только нужно вывести изображение в консоль, »Ќј„≈ Ќ≈ Ѕ”ƒ≈“ –јЅќ“ј“№ –ј—ѕќЋ«Ќќ¬јЌ»≈ „»—Ћј
+	// –????????????????, ???? ?????? ????? ??????? ??????????? ? ???????, »??„˜ ?˜ ?”ƒ˜“ –???“?“? –?—???«??¬??»˜ „»—??
     // image[iA][jA] = 2;
     // image[iB][jB] = 3;
     // image[iC][jC] = 4;
@@ -2538,7 +2546,7 @@ function intersect2(i1, j1, i2, j2, i3, j3, i4, j4) {
 	return [round(i), round(j)];
 }
 
-// »щем ключевые точки ARTag маркера (хз как, но это работает, эту часть кода писал »нсаф)
+// »??? ???????? ????? ARTag ??????? (?? ???, ?? ??? ????????, ??? ????? ???? ????? »????)
 function findPoint(){
 	A = [iA, jA];
 	B = [iB, jB];
@@ -2636,7 +2644,7 @@ function rotate_clockwise(times){
 	}
 }
 
-// ¬озвращает значение ARTag 
+// ¬????????? ???????? ARTag 
 function getARTagValue(raw) {
 	getData(raw);
 	binarization();
