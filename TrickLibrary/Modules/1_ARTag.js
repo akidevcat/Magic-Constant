@@ -41,38 +41,76 @@ var artag = function()
 
 	function line(xf, yf, xs, ys) // int
 	{
+		this.calculate_x = function calculate_x(y)
+		{
+			return (y - this.b) / this.k;
+		}
+		
+		this.calculate_y = function calculate_y(x) // int x
+	    {
+			return this.k * x + this.b;
+	    }
+		
+		this.calculate_b = function calculate_b(k)
+		{
+			return this.y1 - k * this.x1;
+		}
+		
+		this.calculate_k = function calculate_k()
+		{
+			return (this.y2 - this.y1) / (this.x2 - this.x1);
+		}
+		
+		this.calculate_length = function calculate_length()
+		{
+			return Math.sqrt(Math.pow(this.x2 - this.x1, 2) + Math.pow(this.y2 - this.y1, 2));
+		}
+		
 	    this.x1 = xf;
 	    this.y1 = yf;
 	    this.x2 = xs;
 	    this.y2 = ys;
-	    this.length = Math.sqrt(Math.pow(this.x2 - this.x1, 2) + Math.pow(this.y2 - this.y1, 2));
-	    this.k = (this.y2 - this.y1) / (this.x2 - this.x1);
-	    this.b = this.y1 - this.k * this.x1;
-	    
-	    this.calculate_y = function calculate_y(x) // int x
-	    {
-		return this.k * x + this.b;
-	    }
+	    this.length = this.calculate_length();
+	    this.k = this.calculate_k();
+	    this.b = this.calculate_b(this.k);
 
 	    this.get_point_on_line = function get_point_on_line(len) // double len
 	    {
-		var result = new coords();
-		result.x = (len * (this.x2 - this.x1)) / this.length + this.x1;
-		result.y = (len * (this.y2 - this.y1)) / this.length + this.y1;
-		//print("len = ", len, "\n", "x2 = ", this.x2, "\n", "x1 = ", this.x1, "\n", "length = ", this.length, "\n",
-		//   "res = ", (len * (this.x2 - this.x1)) / this.length + this.x1, "\n\n");
-		
-		return result; // coords(x, y)
+			var result = new coords();
+			result.x = (len * (this.x2 - this.x1)) / this.length + this.x1;
+			result.y = (len * (this.y2 - this.y1)) / this.length + this.y1;
+			//print("get_point_on_line: \n", "len = ", len, "\n", "x2 = ", this.x2, "\n", "x1 = ", this.x1, "\n", "length = ", this.length, "\n",
+			//   "res = ", (len * (this.x2 - this.x1)) / this.length + this.x1, "\n\n");
+			
+			return result; // coords(x, y)
 	    }
 
 	    this.get_intersection_point = function get_intersection_point(l) // with line l
 	    {
-		var result = new coords();
-		result.x = (l.b - this.b) / (this.k - l.k);
-		result.y = this.k * result.x + this.b;
-
-		return  result; // coords(x, y)
+			var result = new coords();
+			result.x = (l.b - this.b) / (this.k - l.k);
+			result.y = this.k * result.x + this.b;
+			//print("get_intersection_point: \n", "l.b = ", l.b, "\n", "this.b = ", this.b, "\n", "l.k = ", l.k, "\n", "this.k = ", this.k, 
+			//		"\nx: ", result.x, "\ny: ", result.y, "\n\n");
+			return  result; // coords(x, y)
 	    }
+		
+		this.get_parallel_line = function get_parallel_line(x1, y1)
+		{
+			var res_line = new line();
+			res_line.x1 = x1;
+			res_line.y1 = y1;
+			res_line.k = this.k;
+			res_line.b = res_line.calculate_b(res_line.k);
+			//print("get_parallel_line: ")
+			/*
+			for(var key in res_line)
+			{
+				print(key, " ", res_line[key])
+			}
+			*/
+			return res_line;
+		}
 	}
 
 	function compareNumbers(a, b) { // comparator for ascending sorting of numbers
@@ -155,13 +193,10 @@ var artag = function()
 		{
 			case 'r':
 				getter = get_r;
-				break;
 			case 'g':
 				getter = get_g;
-				break;
 			case 'b':
 				getter = get_b;
-				break;
 		}
 		
 		for(var h = h_mid - 1; h <= h_mid + 1; ++h)
@@ -230,7 +265,7 @@ var artag = function()
 
 	var picture_processing = function() // var pic after that looks like 1-0 matrix
 	{
-		/* // first version
+		 // first version
 		for(var h = 1; h < height - 1; ++h)
 		{
 			for(var w = 1; w < width - 1; ++w)
@@ -242,7 +277,7 @@ var artag = function()
 				pic[h][w] = num;
 			}
 		}
-		*/
+		/*
 		// second version
 		for(var h = 1; h < height - 1; ++h)
 		{
@@ -255,7 +290,7 @@ var artag = function()
 				pic[h][w] = avg;
 			}
 		}
-		
+		*/
 		
 		for(var h = 0; h < height; ++h)
 		{
@@ -311,6 +346,7 @@ var artag = function()
 		}
 		if(goto_flag == 0)
 		{
+			print("bad");
 			for(var i = 4; i < height_u; ++i)
 			{
 				for(var x = width_u, y = i; x >= 4 && y < height_u; --x, ++y)
@@ -355,6 +391,7 @@ var artag = function()
 		}
 		if(goto_flag == 0)
 		{
+			print("bad");
 			for(var i = 4; i < height_u; ++i)
 			{
 				for(var x = 4, y = i; x < width_u && y < height_u; ++x, ++y)
@@ -397,6 +434,10 @@ var artag = function()
 				break;
 			}
 		}
+		if(goto_flag == 0)
+		{
+			print("bad");
+		}
 		
 		//4
 		
@@ -420,6 +461,11 @@ var artag = function()
 				break;
 			}
 		}
+		if(goto_flag == 0)
+		{
+			print("bad");
+		}
+		
 		print("vert: ", vertexes, "end_vert");
 		return;
 	}
@@ -450,6 +496,8 @@ function full_area_alternative_search_of_vertexes()
 		}
 		if(goto_flag == 0)
 		{
+			print("bad");
+			return 0;
 			for(var i = 0; i < height; ++i)
 			{
 				for(var x = width-1, y = i; x >= 3 && y < height; --x, ++y)
@@ -494,6 +542,8 @@ function full_area_alternative_search_of_vertexes()
 		}
 		if(goto_flag == 0)
 		{
+			print("bad");
+			return 0;
 			for(var i = 0; i < height; ++i)
 			{
 				for(var x = 3, y = i; x < width && y < height; ++x, ++y)
@@ -537,6 +587,11 @@ function full_area_alternative_search_of_vertexes()
 				break;
 			}
 		}
+		if(goto_flag == 0)
+		{
+			print("bad");
+			return 0;
+		}
 		
 		//4
 		
@@ -560,8 +615,66 @@ function full_area_alternative_search_of_vertexes()
 				break;
 			}
 		}
+		if(goto_flag == 0)
+		{
+			print("bad");
+			return 0;
+		}
+		
 		print("vert: ", vertexes["x1"], " ", vertexes["y1"], "end_vert");
-		return;
+		return 1;
+	}
+
+	function get_startpoint_of_line(fp, x1, y1, x2, y2)
+	{
+		var res = new coords();
+		var first_line = new line(fp.x, fp.y, x1, y1);
+		var second_line = new line(fp.x, fp.y, x2, y2);
+		if(first_line.length > second_line.length)
+		{
+			//print("f");
+			res.x = x1;
+			res.y = y1;
+			return res;
+		}
+		else
+		{
+			//print("ff");
+			res.x = x2;
+			res.y = y2;
+			return res;
+		}
+	}
+
+	function get_sum_of_vectors(l1, l2) // line objs
+	{
+		var first_point = l1.get_intersection_point(l2);
+		//print("1", " x: ", first_point.x, " y: ", first_point.y);
+		
+		var first_startpoint = get_startpoint_of_line(first_point, l1.x1, l1.y1, l1.x2, l1.y2);
+		//print("2", " x: ", first_startpoint.x, " y: ", first_startpoint.y);
+		var second_startpoint = get_startpoint_of_line(first_point, l2.x1, l2.y1, l2.x2, l2.y2);
+		//print("3", " x: ", second_startpoint.x, " y: ", second_startpoint.y);
+		
+		
+		var first_parallel_line = l1.get_parallel_line(second_startpoint.x, second_startpoint.y);
+		
+		for(var key in first_parallel_line)
+		{
+			print(key, " ", first_parallel_line[key]);
+		}
+		var second_parallel_line = l2.get_parallel_line(first_startpoint.x, first_startpoint.y);
+		/*
+		for(var key in second_parallel_line)
+		{
+			print(key, " ", second_parallel_line[key]);
+		}
+		*/
+		var second_point = first_parallel_line.get_intersection_point(second_parallel_line);
+		//print("4", " x: ",second_point.x, " y: ", second_point.y);
+		
+		var res_line = new line(first_point.x, first_point.y, second_point.x, second_point.y);
+		return res_line;
 	}
 
 	function find_all_coords() // shit
@@ -580,6 +693,40 @@ function full_area_alternative_search_of_vertexes()
 		auxiliary_vertexes["xy2"] = main_edges[1].get_point_on_line(Math.round(main_edges[1].length / 2));
 		auxiliary_vertexes["xy3"] = main_edges[2].get_point_on_line(Math.round(main_edges[2].length / 2));
 		auxiliary_vertexes["xy4"] = main_edges[3].get_point_on_line(Math.round(main_edges[3].length / 2));
+		return;
+	}
+	
+	function find_all_coords_with_vectors()
+	{
+		main_edges.push(new line(vertexes["x1"], vertexes["y1"], vertexes["x2"], vertexes["y2"]));
+		main_edges.push(new line(vertexes["x2"], vertexes["y2"], vertexes["x3"], vertexes["y3"]));
+		main_edges.push(new line(vertexes["x3"], vertexes["y3"], vertexes["x4"], vertexes["y4"]));	
+		main_edges.push(new line(vertexes["x4"], vertexes["y4"], vertexes["x1"], vertexes["y1"]));
+		
+		var first_diag = new line(vertexes["x1"], vertexes["y1"], vertexes["x3"], vertexes["y3"]);
+		var second_diag = new line(vertexes["x2"], vertexes["y2"], vertexes["x4"], vertexes["y4"]);
+		
+		center = first_diag.get_intersection_point(second_diag); // x, y
+		
+		var first_main_vector = get_sum_of_vectors(main_edges[0], main_edges[2]);
+		/*
+		for(var key in first_main_vector)
+		{
+			print(key, " ", first_main_vector[key]);
+		}
+		*/
+		var second_main_vector = get_sum_of_vectors(main_edges[1], main_edges[3]);
+		
+		auxiliary_vertexes["xy1"] = first_main_vector.get_intersection_point(main_edges[0]);
+		auxiliary_vertexes["xy2"] = second_main_vector.get_intersection_point(main_edges[1]);
+		auxiliary_vertexes["xy3"] = first_main_vector.get_intersection_point(main_edges[2]);
+		auxiliary_vertexes["xy4"] = second_main_vector.get_intersection_point(main_edges[3]);
+		/*
+		for(var key in auxiliary_vertexes)
+		{
+			print(key, " ", auxiliary_vertexes[key].x, auxiliary_vertexes[key].y);
+		}
+		*/
 		return;
 	}
 
@@ -687,7 +834,7 @@ function full_area_alternative_search_of_vertexes()
 		squares[3][2] = temp_line.get_point_on_line(temp_line.length / 3); // 15
 	}
 
-	function matrix_coords_to_bool() // we're create result artag matrix for known coords
+	function artag_coords_to_bool() // we're create result artag matrix for known coords
 	{
 		var now_x;
 		var now_y;
@@ -859,12 +1006,12 @@ function full_area_alternative_search_of_vertexes()
 	this.get_code = function()
 	{
 		// video from camera to display below
-		/*
+		
 		brick.configure("video2", "lineSensor");
 		brick.lineSensor("video2").init(true);
 		while(!brick.keys().wasPressed(KeysEnum.Up))
 			script.wait(100);
-		*/
+		
 		var temp_pic = getPhoto().toString().split(",");
 		
 		
@@ -877,9 +1024,8 @@ function full_area_alternative_search_of_vertexes()
 			}
 		}	
 		picture_processing();
-		if(borders_is_clear())
+		if(borders_is_clear() && full_area_alternative_search_of_vertexes())
 		{
-			full_area_alternative_search_of_vertexes();
 			find_all_coords();
 			
 			add_first_square_to_matrix();
@@ -887,7 +1033,7 @@ function full_area_alternative_search_of_vertexes()
 			add_third_square_to_matrix();
 			add_fourth_square_to_matrix();
 			
-			matrix_coords_to_bool();
+			artag_coords_to_bool();
 			
 			print_matrix(pic);
 			
