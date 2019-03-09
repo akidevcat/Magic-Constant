@@ -38,8 +38,8 @@ var mLeft = brick.motor(M2).setPower; // Default left motor in 2D simulator
 var mRight = brick.motor(M1).setPower; // Default right motor in 2D simulator
 var mLeftGet = brick.motor(M2).power; // Default left motor in 2D simulator
 var mRightGet = brick.motor(M1).power; // Default right motor in 2D simulator
-var cpr = 374; // Encoder's count per round of wheel //350
-var cpr0 = 394;
+var cpr = 392; // Encoder's count per round of wheel //350
+var cpr0 = 392;
 var cprToDeg = 360/cpr;
 var kp2 = 1.1;
 var kd2 = 0.5;
@@ -84,13 +84,38 @@ var timeCalibrate2DRobot = 2000;
 //var ay = brick.gyroscope().read()[5];
 
 
+
+
+
+
+wait = script.wait;
+sign = function(n) { return n > 0 ? 1 : n = 0 ? 0 : -1; }
+sqr = function(n) { return n * n; }
+sqrt = Math.sqrt;
+min = function(a, b) { return a < b ? a : b; }
+max = function(a, b) { return a > b ? a : b; }
+abs = Math.abs;
+sin = Math.sin;
+cos = Math.cos;
+round = Math.round;
+
 //=====ARTAG CODE=====
 
 
 /*
 	How to use:
 	    var artag_obj = new artag();
-	    var code = artag_obj.get_code();
+		
+		while(true)
+		{
+			code = artag_obj.get_code();
+			if(code != "repeat")
+			{
+				break;
+			}
+			*some movings*
+		}
+		*using of code*
 */
 
 
@@ -109,8 +134,6 @@ var artag = function()
 	var width = 160;
 	var width_u = 156; // area of interest
 
-
-
 	function coords(x, y) // alternative of pair in c++
 	{
 		this.x = x;
@@ -119,38 +142,76 @@ var artag = function()
 
 	function line(xf, yf, xs, ys) // int
 	{
+		this.calculate_x = function calculate_x(y)
+		{
+			return (y - this.b) / this.k;
+		}
+		
+		this.calculate_y = function calculate_y(x) // int x
+	    {
+			return this.k * x + this.b;
+	    }
+		
+		this.calculate_b = function calculate_b(k)
+		{
+			return this.y1 - k * this.x1;
+		}
+		
+		this.calculate_k = function calculate_k()
+		{
+			return (this.y2 - this.y1) / (this.x2 - this.x1);
+		}
+		
+		this.calculate_length = function calculate_length()
+		{
+			return Math.sqrt(Math.pow(this.x2 - this.x1, 2) + Math.pow(this.y2 - this.y1, 2));
+		}
+		
 	    this.x1 = xf;
 	    this.y1 = yf;
 	    this.x2 = xs;
 	    this.y2 = ys;
-	    this.length = Math.sqrt(Math.pow(this.x2 - this.x1, 2) + Math.pow(this.y2 - this.y1, 2));
-	    this.k = (this.y2 - this.y1) / (this.x2 - this.x1);
-	    this.b = this.y1 - this.k * this.x1;
-	    
-	    this.calculate_y = function calculate_y(x) // int x
-	    {
-		return this.k * x + this.b;
-	    }
+	    this.length = this.calculate_length();
+	    this.k = this.calculate_k();
+	    this.b = this.calculate_b(this.k);
 
 	    this.get_point_on_line = function get_point_on_line(len) // double len
 	    {
-		var result = new coords();
-		result.x = (len * (this.x2 - this.x1)) / this.length + this.x1;
-		result.y = (len * (this.y2 - this.y1)) / this.length + this.y1;
-		//print("len = ", len, "\n", "x2 = ", this.x2, "\n", "x1 = ", this.x1, "\n", "length = ", this.length, "\n",
-		//   "res = ", (len * (this.x2 - this.x1)) / this.length + this.x1, "\n\n");
-		
-		return result; // coords(x, y)
+			var result = new coords();
+			result.x = (len * (this.x2 - this.x1)) / this.length + this.x1;
+			result.y = (len * (this.y2 - this.y1)) / this.length + this.y1;
+			//print("get_point_on_line: \n", "len = ", len, "\n", "x2 = ", this.x2, "\n", "x1 = ", this.x1, "\n", "length = ", this.length, "\n",
+			//   "res = ", (len * (this.x2 - this.x1)) / this.length + this.x1, "\n\n");
+			
+			return result; // coords(x, y)
 	    }
 
 	    this.get_intersection_point = function get_intersection_point(l) // with line l
 	    {
-		var result = new coords();
-		result.x = (l.b - this.b) / (this.k - l.k);
-		result.y = this.k * result.x + this.b;
-
-		return  result; // coords(x, y)
+			var result = new coords();
+			result.x = (l.b - this.b) / (this.k - l.k);
+			result.y = this.k * result.x + this.b;
+			//print("get_intersection_point: \n", "l.b = ", l.b, "\n", "this.b = ", this.b, "\n", "l.k = ", l.k, "\n", "this.k = ", this.k, 
+			//		"\nx: ", result.x, "\ny: ", result.y, "\n\n");
+			return  result; // coords(x, y)
 	    }
+		
+		this.get_parallel_line = function get_parallel_line(x1, y1)
+		{
+			var res_line = new line();
+			res_line.x1 = x1;
+			res_line.y1 = y1;
+			res_line.k = this.k;
+			res_line.b = res_line.calculate_b(res_line.k);
+			//print("get_parallel_line: ")
+			/*
+			for(var key in res_line)
+			{
+				print(key, " ", res_line[key])
+			}
+			*/
+			return res_line;
+		}
 	}
 
 	function compareNumbers(a, b) { // comparator for ascending sorting of numbers
@@ -163,11 +224,21 @@ var artag = function()
 
 	function print_matrix(m)
 	{
-		var le = m.length;
-		for(var i = 0; i < le; ++i)
+		//var le = m.length;
+		//for(var i = 0; i < le; ++i)
+		//{
+		//	print(m[i]);
+		//}
+		var s = "";
+		for(var i = 0; i < height; ++i)
 		{
-			print(m[i]);
+			for(var j = 0; j < width; ++j)
+			{
+				s += m[i][j].toString();
+			}
+			s += "\n";
 		}
+		print(s);
 	}
 
 	function matrix_to_file(m)
@@ -265,9 +336,37 @@ var artag = function()
 		return r * 256 * 256 + g * 256 + b;
 	}
 
+	var alternative_rgb_to_bool = function(rgb)
+	{
+		var r = get_r(rgb);
+		var g = get_g(rgb);
+		var b = get_b(rgb);
+		
+		var brightness_const = 120;
+		
+		
+		if (r + g + b < brightness_const)
+		{
+			return 1; //dark
+		}
+		else
+		{
+			return 0; //light
+		}
+	}
+
+	var alternative1_rgb_to_bool = function(rgb)
+	{
+		var r = get_r(rgb);
+		var g = get_g(rgb);
+		var b = get_b(rgb);
+		
+		
+	}
+
 	var picture_processing = function() // var pic after that looks like 1-0 matrix
 	{
-		
+		 // first version
 		for(var h = 1; h < height - 1; ++h)
 		{
 			for(var w = 1; w < width - 1; ++w)
@@ -279,6 +378,20 @@ var artag = function()
 				pic[h][w] = num;
 			}
 		}
+		/*
+		// second version
+		for(var h = 1; h < height - 1; ++h)
+		{
+			for(var w = 1; w < width - 1; ++w)
+			{
+				var r = get_r(pic[h][w]);
+				var g = get_g(pic[h][w]);
+				var b = get_b(pic[h][w]);
+				var avg = (r + g + b) / 3;
+				pic[h][w] = avg;
+			}
+		}
+		*/
 		
 		for(var h = 0; h < height; ++h)
 		{
@@ -288,7 +401,26 @@ var artag = function()
 			}
 		}
 	}
-
+	
+	var borders_is_clear = function()
+	{
+		for(var w = 3; w < width; ++w)
+		{
+			if(pic[0][w] == 1 || pic[height-1][w] == 1)
+			{
+				return 0;
+			}
+		}
+		for(var h = 0; h < height; ++h)
+		{
+			if(pic[h][3] == 1 || pic[h][width-1] == 1)
+			{
+				return 0;
+			}
+		}
+		return 1;
+	}
+	
 	function alternative_search_of_vertexes()
 	{
 		var goto_flag = 0;
@@ -311,6 +443,28 @@ var artag = function()
 			if(goto_flag == 1)
 			{
 				break;
+			}
+		}
+		if(goto_flag == 0)
+		{
+			print("bad");
+			for(var i = 4; i < height_u; ++i)
+			{
+				for(var x = width_u, y = i; x >= 4 && y < height_u; --x, ++y)
+				{
+					if(pic[y][x] == 1)
+					{
+						vertexes["x1"] = x;
+						vertexes["y1"] = y;
+						
+						goto_flag = 1;
+						break
+					}
+				}
+				if(goto_flag == 1)
+				{
+					break;
+				}
 			}
 		}
 		
@@ -336,6 +490,28 @@ var artag = function()
 				break;
 			}
 		}
+		if(goto_flag == 0)
+		{
+			print("bad");
+			for(var i = 4; i < height_u; ++i)
+			{
+				for(var x = 4, y = i; x < width_u && y < height_u; ++x, ++y)
+				{
+					if(pic[y][x] == 1)
+					{
+						vertexes["x2"] = x;
+						vertexes["y2"] = y;
+						
+						goto_flag = 1;
+						break
+					}
+				}
+				if(goto_flag == 1)
+				{
+					break;
+				}
+			}
+		}
 		
 		//3
 		
@@ -358,6 +534,10 @@ var artag = function()
 			{
 				break;
 			}
+		}
+		if(goto_flag == 0)
+		{
+			print("bad");
 		}
 		
 		//4
@@ -382,8 +562,220 @@ var artag = function()
 				break;
 			}
 		}
+		if(goto_flag == 0)
+		{
+			print("bad");
+		}
 		
+		print("vert: ", vertexes, "end_vert");
 		return;
+	}
+
+function full_area_alternative_search_of_vertexes()
+	{
+		var goto_flag = 0;
+		
+		// 1
+		
+		for(var i = 3; i < width; ++i)
+		{
+			for(var x = i, y = 0; x >= 3 && y < height; --x, ++y)
+			{
+				if(pic[y][x] == 1)
+				{
+					vertexes["x1"] = x;
+					vertexes["y1"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		if(goto_flag == 0)
+		{
+			print("bad");
+			return 0;
+			for(var i = 0; i < height; ++i)
+			{
+				for(var x = width-1, y = i; x >= 3 && y < height; --x, ++y)
+				{
+					if(pic[y][x] == 1)
+					{
+						vertexes["x1"] = x;
+						vertexes["y1"] = y;
+						
+						goto_flag = 1;
+						break
+					}
+				}
+				if(goto_flag == 1)
+				{
+					break;
+				}
+			}
+		}
+		
+		//2
+		
+		goto_flag = 0;
+		
+		for(var i = width - 1; i >= 3; --i)
+		{
+			for(var x = i, y = 3; x < width && y < height; ++x, ++y)
+			{
+				if(pic[y][x] == 1)
+				{	
+					vertexes["x2"] = x;
+					vertexes["y2"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		if(goto_flag == 0)
+		{
+			print("bad");
+			return 0;
+			for(var i = 0; i < height; ++i)
+			{
+				for(var x = 3, y = i; x < width && y < height; ++x, ++y)
+				{
+					if(pic[y][x] == 1)
+					{
+						vertexes["x2"] = x;
+						vertexes["y2"] = y;
+						
+						goto_flag = 1;
+						break
+					}
+				}
+				if(goto_flag == 1)
+				{
+					break;
+				}
+			}
+			
+		}
+		
+		//3
+		
+		goto_flag = 0;
+		
+		for(var i = width - 1; i >= 3; --i)
+		{
+			for(var x = i, y = height - 1; x < width && y >= 0; ++x, --y)
+			{
+				if(pic[y][x] == 1)
+				{
+					vertexes["x3"] = x;
+					vertexes["y3"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		if(goto_flag == 0)
+		{
+			print("bad");
+			return 0;
+		}
+		
+		//4
+		
+		goto_flag = 0;
+		
+		for(var i = 3; i < width; ++i)
+		{
+			for(var x = i, y = height - 1; x >= 3 && y >= 0; --x, --y)
+			{
+				if(pic[y][x] == 1)
+				{
+					vertexes["x4"] = x;
+					vertexes["y4"] = y;
+					
+					goto_flag = 1;
+					break
+				}
+			}
+			if(goto_flag == 1)
+			{
+				break;
+			}
+		}
+		if(goto_flag == 0)
+		{
+			print("bad");
+			return 0;
+		}
+		
+		print("vert: ", vertexes["x1"], " ", vertexes["y1"], "end_vert");
+		return 1;
+	}
+
+	function get_startpoint_of_line(fp, x1, y1, x2, y2)
+	{
+		var res = new coords();
+		var first_line = new line(fp.x, fp.y, x1, y1);
+		var second_line = new line(fp.x, fp.y, x2, y2);
+		if(first_line.length > second_line.length)
+		{
+			//print("f");
+			res.x = x1;
+			res.y = y1;
+			return res;
+		}
+		else
+		{
+			//print("ff");
+			res.x = x2;
+			res.y = y2;
+			return res;
+		}
+	}
+
+	function get_sum_of_vectors(l1, l2) // line objs
+	{
+		var first_point = l1.get_intersection_point(l2);
+		//print("1", " x: ", first_point.x, " y: ", first_point.y);
+		
+		var first_startpoint = get_startpoint_of_line(first_point, l1.x1, l1.y1, l1.x2, l1.y2);
+		//print("2", " x: ", first_startpoint.x, " y: ", first_startpoint.y);
+		var second_startpoint = get_startpoint_of_line(first_point, l2.x1, l2.y1, l2.x2, l2.y2);
+		//print("3", " x: ", second_startpoint.x, " y: ", second_startpoint.y);
+		
+		
+		var first_parallel_line = l1.get_parallel_line(second_startpoint.x, second_startpoint.y);
+		
+		for(var key in first_parallel_line)
+		{
+			print(key, " ", first_parallel_line[key]);
+		}
+		var second_parallel_line = l2.get_parallel_line(first_startpoint.x, first_startpoint.y);
+		/*
+		for(var key in second_parallel_line)
+		{
+			print(key, " ", second_parallel_line[key]);
+		}
+		*/
+		var second_point = first_parallel_line.get_intersection_point(second_parallel_line);
+		//print("4", " x: ",second_point.x, " y: ", second_point.y);
+		
+		var res_line = new line(first_point.x, first_point.y, second_point.x, second_point.y);
+		return res_line;
 	}
 
 	function find_all_coords() // shit
@@ -402,6 +794,40 @@ var artag = function()
 		auxiliary_vertexes["xy2"] = main_edges[1].get_point_on_line(Math.round(main_edges[1].length / 2));
 		auxiliary_vertexes["xy3"] = main_edges[2].get_point_on_line(Math.round(main_edges[2].length / 2));
 		auxiliary_vertexes["xy4"] = main_edges[3].get_point_on_line(Math.round(main_edges[3].length / 2));
+		return;
+	}
+	
+	function find_all_coords_with_vectors()
+	{
+		main_edges.push(new line(vertexes["x1"], vertexes["y1"], vertexes["x2"], vertexes["y2"]));
+		main_edges.push(new line(vertexes["x2"], vertexes["y2"], vertexes["x3"], vertexes["y3"]));
+		main_edges.push(new line(vertexes["x3"], vertexes["y3"], vertexes["x4"], vertexes["y4"]));	
+		main_edges.push(new line(vertexes["x4"], vertexes["y4"], vertexes["x1"], vertexes["y1"]));
+		
+		var first_diag = new line(vertexes["x1"], vertexes["y1"], vertexes["x3"], vertexes["y3"]);
+		var second_diag = new line(vertexes["x2"], vertexes["y2"], vertexes["x4"], vertexes["y4"]);
+		
+		center = first_diag.get_intersection_point(second_diag); // x, y
+		
+		var first_main_vector = get_sum_of_vectors(main_edges[0], main_edges[2]);
+		/*
+		for(var key in first_main_vector)
+		{
+			print(key, " ", first_main_vector[key]);
+		}
+		*/
+		var second_main_vector = get_sum_of_vectors(main_edges[1], main_edges[3]);
+		
+		auxiliary_vertexes["xy1"] = first_main_vector.get_intersection_point(main_edges[0]);
+		auxiliary_vertexes["xy2"] = second_main_vector.get_intersection_point(main_edges[1]);
+		auxiliary_vertexes["xy3"] = first_main_vector.get_intersection_point(main_edges[2]);
+		auxiliary_vertexes["xy4"] = second_main_vector.get_intersection_point(main_edges[3]);
+		/*
+		for(var key in auxiliary_vertexes)
+		{
+			print(key, " ", auxiliary_vertexes[key].x, auxiliary_vertexes[key].y);
+		}
+		*/
 		return;
 	}
 
@@ -509,7 +935,7 @@ var artag = function()
 		squares[3][2] = temp_line.get_point_on_line(temp_line.length / 3); // 15
 	}
 
-	function matrix_coords_to_bool() // for known coords we're create result artag matrix
+	function artag_coords_to_bool() // we're create result artag matrix for known coords
 	{
 		var now_x;
 		var now_y;
@@ -520,13 +946,14 @@ var artag = function()
 				now_x = Math.round(squares[i][j].x);
 				now_y = Math.round(squares[i][j].y);
 				result_matrix[i][j] =  pic[now_y][now_x];
+				pic[now_y][now_x] = 2;
 			}
 		}
 		
 		return;
 	}
 
-	function artag_decode()
+	function artag_decode_old()
 	{
 		var n, x, y;
 		if(result_matrix[0][0] == 0)
@@ -553,12 +980,141 @@ var artag = function()
 			x = result_matrix[1][3] * 4 + result_matrix[2][0] * 2 + result_matrix[2][2];
 			y = result_matrix[2][3] * 4 + result_matrix[3][1] * 2 + result_matrix[3][2];
 		}
+		else
+		{
+			return "not a number";
+		}
+		return [x, y, n];
+	}
+	
+	function artag_decode()
+	{
+		print("result_matrix: ", result_matrix);
+		// verify the number of checking bits
+		
+		var sum = 0;
+		
+		for(var i = 0; i < 4; i += 3)
+		{
+			for(var j = 0; j < 4; j += 3)
+			{
+				sum += result_matrix[i][j];
+			}
+		}
+		if(sum != 3)
+		{
+			print("returned not a number");
+			return "not a number";
+		}
+		print("sum: ", sum);
+		
+		// rotating result_matrix to base view
+		
+		var completed_matrix = [[], [], [], []];
+		
+		if(!result_matrix[3][0])
+		{
+			for(var y = 0; y < 4; ++y)
+			{
+				for(var x = 0; x < 4; ++x)
+				{
+					completed_matrix[3 - x][y] = result_matrix[y][x];
+				}
+			}
+		}
+		else if(!result_matrix[0][0])
+		{
+			for(var y = 0; y < 4; ++y)
+			{
+				for(var x = 0; x < 4; ++x)
+				{
+					completed_matrix[3 - y][3 - x] = result_matrix[y][x]; 
+				}
+			}
+		}
+		else if(!result_matrix[0][3])
+		{
+			for(var y = 0; y < 4; ++y)
+			{
+				for(var x = 0; x < 4; ++x)
+				{
+					completed_matrix[x][3 - y] = result_matrix[y][x]; 
+				}
+			}
+		}
+		else
+		{
+			completed_matrix = result_matrix;
+		}
+		print("completed_matrix: ", completed_matrix);
+		
+		
+		// two dimensional completed_matrix to Hamming's code
+		
+		var hamm_code = [];
+		
+		for(var y = 0; y < 4; ++y)
+		{
+			for(var x = 0; x < 4; ++x)
+			{
+				if((x == 0 && y == 0) || (x == 0 && y == 3) || (x == 3 && y == 0) || (x == 3 && y == 3))
+				{
+					print("pass");
+					continue;
+				}
+				hamm_code.push(completed_matrix[y][x]);
+			}
+		}
+		print("hamm_code: ", hamm_code);
+		
+		// parity checking of bits
+		
+		// first 
+		if(hamm_code[0] != (hamm_code[2] + hamm_code[4] + hamm_code[6] + hamm_code[8] + hamm_code[10]) % 2)
+		{
+			print("hamm_code returned not a number");
+			return "not a number";
+		}
+		
+		//second
+		if(hamm_code[1] != (hamm_code[2] + hamm_code[5] + hamm_code[6] + hamm_code[9] + hamm_code[10]) % 2)
+		{
+			print("hamm_code returned not a number");
+			return "not a number";
+		}
+		
+		//fourth
+		if(hamm_code[3] != (hamm_code[4] + hamm_code[5] + hamm_code[6] + hamm_code[11]) % 2)
+		{
+			print("hamm_code returned not a number");
+			return "not a number";
+		}
+		
+		//eighth
+		if(hamm_code[7] != (hamm_code[8] + hamm_code[9] + hamm_code[10] + hamm_code[11]) % 2)
+		{
+			print("hamm_code returned not a number");
+			return "not a number";
+		}
+		
+		var n = hamm_code[2] * 2 + hamm_code[4];
+		var x = hamm_code[5] * 4 + hamm_code[6] * 2 + hamm_code[8];
+		var y = hamm_code[9] * 4 + hamm_code[10] * 2 + hamm_code[11];
+		
 		return [x, y, n];
 	}
 
 	this.get_code = function()
-	{	
-		var temp_pic = brick.getPhoto().toString().split(","); // TODO: check workability of getPhoto()
+	{
+		// video from camera to display below
+		/*
+		brick.configure("video2", "lineSensor");
+		brick.lineSensor("video2").init(true);
+		while(!brick.keys().wasPressed(KeysEnum.Up))
+			script.wait(100);
+		*/
+		var temp_pic = getPhoto().toString().split(",");
+		
 		
 		for(var h = 0; h < height; ++h)
 		{
@@ -569,24 +1125,38 @@ var artag = function()
 			}
 		}	
 		picture_processing();
-		alternative_search_of_vertexes();
-		find_all_coords();
+		if(borders_is_clear() && full_area_alternative_search_of_vertexes())
+		{
+			find_all_coords();
+			
+			add_first_square_to_matrix();
+			add_second_square_to_matrix();
+			add_third_square_to_matrix();
+			add_fourth_square_to_matrix();
+			
+			artag_coords_to_bool();
+			
+			print_matrix(pic);
+			
+			var res_numbers = artag_decode(); // [x, y, n] or "not a number"
+			
+			return (res_numbers == "not a number" ? "repeat" : res_numbers);
+		}
+		else
+		{
+			print("borders isn't clear")
+			print_matrix(pic);
+			return "repeat";
+		}
 		
-		add_first_square_to_matrix();
-		add_second_square_to_matrix();
-		add_third_square_to_matrix();
-		add_fourth_square_to_matrix();
-		
-		matrix_coords_to_bool();
-		
-		var res_numbers = artag_decode(); // [x, y, n]
-		
-		return res_numbers; // [x, y, n]
 	}
 }
 
 
 //=====ARTAG CODE END=====
+
+
+
 
 
 //##################
@@ -615,7 +1185,7 @@ odometriya.rDistance = 0
 odometriya.teta = 0 //90* = pi / 2; 180* = pi; 270* = 1.5 * pi; 360* = 2 * pi
 //This is the delay between iterations inside the main loop (<Your MS Delay> / 1000)
 //If this value is 0 then it'll be calculated automatically (!but less accurate!)
-odometriya.deltat = 0 / 1000
+odometriya.deltat = 10 / 1000
 odometriya.updatedelay = 10
 
 //These are the local ones (don't edit them):
@@ -717,7 +1287,9 @@ movementlib.cellsize = 40
 //kd recommended: = 0.1
 movementlib.correctiondelay = 5
 movementlib.sensorscorrectiondelay = 50
-movementlib.correctionthreshold = length / 1.5;
+//movementlib.correctionthreshold = length / 1.5; //for real
+
+movementlib.correctionthreshold = length / 1.85; //for sim
 movementlib.updatedelay = 5
 
 //Local variables (don't TOUCH111)
@@ -1663,6 +2235,23 @@ var rot2teta = function(startRot) {
 	return startTeta;
 }
 
+var scantag = function(ang) {
+	var artag_obj = new artag();
+	var code = getARTagValue(getData());
+	var i = 0;
+	while(code[0] == -1)
+	{
+		code = getARTagValue(getData());
+		if (ang > 0)
+			movementlib.rotate_encoderssmooth(6, pi / 85);
+		else
+			movementlib.rotate_encoderssmooth(6, -pi / 85);
+		script.wait(10);
+		i++;
+	}
+	return code;
+}
+
 var main = function() {
 
    	trikTaxi.walls = ["3, 11", "10, 11", "15, 23", "18, 19", "16, 24", "26, 27", "27, 35", "39, 47", "40, 48", "53, 61"]
@@ -1675,15 +2264,27 @@ var main = function() {
 		    1, 1, 1, 1, 0, 1, 0, 1,
 		    1, 0, 1, 1, 1, 1, 1, 1]
 	script.wait(100);
-	
+
+	//var input = script.readAll("input.txt").toString();
+	//var inputPos = input.split("\n")[0];
+	//print(inputPos);
+	//var arraw = input.split("\n")[1].substr(1);
+
 	odometriya.Start();
 	movementlib.start();
 	
-	var x = 5;
-	var y = 2;
-	var endx = 2;
-	var endy = 2;
-	var rot = 3;
+	//1 0 1
+	//2 1 3
+	//
+	//
+	//
+	//
+	var x = 0;
+	var y = 7;
+	var endx = 1;
+	var endy = 4;
+	var rot = 2;
+	var arrot = 2;
 	
 	var cell0 = x + y * 8;
 	var cell1 = endx + endy * 8;
@@ -1691,10 +2292,379 @@ var main = function() {
 
 	odometriya.teta = startTeta;
 	var path = trikTaxi.magicbfs(cell0, cell1, maze, 8, 8, startTeta / (2 * pi));
-	movementlib.move_path(70, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1.7, 0.85, 0);
-
-	display.print("finish");
-	while (true) {
+	movementlib.move_path(40, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1, 0.5, 0);
+	
+	var delta_angle = rot2teta(arrot) - odometriya.teta;
+	if (delta_angle > pi)
+		delta_angle = delta_angle - 2 * pi;
+	else if (delta_angle < -pi)
+		delta_angle = 2 * pi + delta_angle;
+	movementlib.rotate_encoderssmooth(30, delta_angle);
+	movementlib.move_encoders(-10, 8);
+	if (delta_angle > 0)
+		movementlib.rotate_encoderssmooth(30, pi / 2 * 0.85);
+	else
+		movementlib.rotate_encoderssmooth(30, - pi / 2 * 0.85);
+	
+	var code = scantag(delta_angle);
+	display.print("(" + code[0] + "," + code[1] + ")" + code[2]);
+	brick.playSound("Beep.wav");
+	while (true)
 		script.wait(100);
+}
+
+// –азмеры изображени€
+height = 120, width = 160;
+
+// «десь хранитьс€ изображение в виде матрицы нулей и единиц
+image = [];
+
+// «начени€ ARTag маркера
+values = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+
+// ¬ыделенна€ область с маркером (пр€моугольник)
+// iMin, iMax задают горизонтальные пр€мые
+// jMin, jMax задают вертикальные пр€мые
+iMin = 0, iMax = 0, jMin = 0, jMax = 0;
+
+// ¬ыделенна€ область с маркером
+// 
+// 
+k1Min = 0, k1Max = 0, k2Min = 0, k2Max = 0;
+
+// ”глы ARTag изображени€
+iA = 0, jA = 0, iB = 0, jB = 0, iC = 0, jC = 0, iD = 0, jD = 0;
+
+//file1 = "9.txt"
+//file2 = "9.clue"
+
+// ѕрочитать картинку
+function getData(raw) {
+	if (raw == undefined)
+		raw = getPhoto().toString();
+	//print("------------")
+	//print (raw[0]);
+	//raw =  script.readAll("0.txt");
+	raw = raw.split(",");
+	
+	
+	//script.removeFile(file1)
+	//script.writeToFile(file1, raw)
+	
+	script.wait(2000)
+	for (i = 0; i < height; ++i) {
+		image[i] = [];
+		for (j = 0; j < width; ++j) {
+			color = raw[i * width + j];
+			// ѕереводим RGB в grayscale
+			image[i][j] = ((color & 0xff0000) >> 16) + ((color & 0xff00) >> 8) + (color & 0xff);
+		}
 	}
+	// ќчищаем 
+	for (i = 0; i < height; ++i) {
+		for (j = 0; j < 4; j++){
+			image[i][j] = 255 + 255 + 255;
+		}
+				
+	}
+	for (i = 0; i < width; ++i) {
+		for (j = 0; j < 4; j++){
+			image[j][i] = 255 + 255 + 255;
+		}
+				
+	}
+	
+	// ‘икс от просвета снизу (если далеко от стенки)
+	for (i = height - 8; i < height; ++i) 
+		for (j = 0; j < width; ++j)
+			image[i][j] = 255 + 255 + 255;
+}
+
+// јдаптивна€ бинаризаци€, используетс€ среднее арифметическое
+function binarization() {
+	sum = 0;
+	for (i = 0; i < height; ++i)
+		for (j = 0; j < width; ++j)
+			sum += image[i][j];
+	mean = sum / height / width;
+	for (i = 0; i < height; ++i)
+		for (j = 0; j < width; ++j)
+			image[i][j] = (4 * image[i][j] > mean ? 0 : 1);
+}
+
+// ¬ывод изображени€ в консоль
+// ћожно скопировать и просмотреть картинку в Notepad++
+function printImage() {
+    for (i = 0; i < height; ++i) {
+		str = "";
+        for (j = 0; j < width; ++j)
+			// ¬ывод форматной строкой
+			// 0: белый пиксель
+			// 1: черный пиксель
+			// 2-5: углы ARTag маркера
+			// 6: ключевые точки
+			str += ".#ABCD*"[image[i][j]] + " ";
+        print(str);
+    }
+}
+
+// ¬ывод выделенного изображени€ в консоль
+function printSelectedImage() {
+	for (i = iMin; i <= iMax; ++i) {
+		str = "";
+        for (j = jMin; j <= jMax; ++j)
+			str += ".#ABCD*"[image[i][j]] + " ";
+        print(str);
+    }
+}
+
+// ѕоиск углов ARTag маркера
+function getCorners() {
+	iMin = 0, iMax = 0, jMin = 0, jMax = 0;
+	k1Min = 0, k1Max = 0, k2Min = 0, k2Max = 0;
+	iMin = height - 1, iMax = 0;
+	jMin = width - 1, jMax = 0;
+	k1Min = height + width, k1Max = 0;
+	k2Min = height + width, k2Max = -width;
+	for (i = 0; i < height; ++i)
+		for (j = 0; j < width; ++j)
+			if (image[i][j]) {
+				iMin = min(iMin, i);
+				iMax = max(iMax, i);
+				jMin = min(jMin, j);
+				jMax = max(jMax, j);
+				k1Min = min(k1Min, i + j);
+				k1Max = max(k1Max, i + j);
+				k2Min = min(k2Min, i - j);
+				k2Max = max(k2Max, i - j);
+			}
+	if (iMax - iMin < 35 || jMax - jMin < 35) {
+		print("Error: ARTag is too small to read it\n");
+
+		iA = 0, jA = 0;
+
+		iB = 0, jB = width - 1;
+
+		iC = height - 1, jC = width - 1;
+
+		iD = height - 1, jD = 0;
+
+		return;
+
+	}
+	//  оличество белых пикселей вне маркера, но в выделенной области
+	// Ќужно дл€ определени€ вида маркера: почти пр€мой / под наклоном
+	countOfWhite = 0;
+	for (i = iMin; i <= iMax; ++i) {
+		j = jMin;
+		while (j <= jMax && !image[i][j])
+			++j, ++countOfWhite;
+		if (j < jMax) {
+			j = jMax;
+			while (j >= jMin && !image[i][j])
+				--j, ++countOfWhite;
+		}
+	}
+	// ≈сли ARTag маркер наклонен, ищем углы с боков
+	if (countOfWhite * 2 > (iMax - iMin + 1) * (jMax - jMin + 1)) {
+		// Point A
+		i1 = iMin, i2 = iMax;
+		while (!image[i1][jMin]) ++i1;
+		while (!image[i2][jMin]) --i2;
+		iA = round((i1 + i2) / 2), jA = jMin;
+		// Point B
+		j1 = jMin, j2 = jMax;
+		while (!image[iMin][j1]) ++j1;
+		while (!image[iMin][j2]) --j2;
+		iB = iMin, jB = round((j1 + j2) / 2);
+		// Point C
+		i1 = iMin, i2 = iMax;
+		while (!image[i1][jMax]) ++i1;
+		while (!image[i2][jMax]) --i2;
+		iC = round((i1 + i2) / 2), jC = jMax;
+		// Point D
+		j1 = jMin, j2 = jMax;
+		while (!image[iMax][j1]) ++j1;
+		while (!image[iMax][j2]) --j2;
+		iD = iMax, jD = round((j1 + j2) / 2);
+	} else { // ≈сли почти пр€мо, ищем углы по диагонал€м
+		// Point A
+		i1 = iMin, i2 = k1Min - jMin;
+		while (!image[i1][k1Min - i1]) ++i1;
+		while (!image[i2][k1Min - i2]) --i2;
+		iA = round((i1 + i2) / 2), jA = k1Min - iA;
+		// Point B
+		i1 = iMin, i2 = k2Min + jMax;
+		while (!image[i1][i1 - k2Min]) ++i1;
+		while (!image[i2][i2 - k2Min]) --i2;
+		iB = round((i1 + i2) / 2), jB = iB - k2Min;
+		// Point C
+		i1 = k1Max - jMax, i2 = iMax;
+		while (!image[i1][k1Max - i1]) ++i1;
+		while (!image[i2][k1Max - i2]) --i2;
+		iC = round((i1 + i2) / 2), jC = k1Max - iC;
+		// Point D
+		i1 = k2Max + jMin, i2 = iMax;
+		while (!image[i1][i1 - k2Max]) ++i1;
+		while (!image[i2][i1 - k2Max]) --i2;
+		iD = round((i1 + i2) / 2), jD = iD - k2Max;
+	}
+	// –аскомментировать, если только нужно вывести изображение в консоль, »Ќј„≈ Ќ≈ Ѕ”ƒ≈“ –јЅќ“ј“№ –ј—ѕќЋ«Ќќ¬јЌ»≈ „»—Ћј
+    // image[iA][jA] = 2;
+    // image[iB][jB] = 3;
+    // image[iC][jC] = 4;
+    // image[iD][jD] = 5;
+}
+
+// 3 points and vector from 3th point
+function intersect1(i1, j1, i2, j2, i3, j3, di, dj) {
+	k1 = (i1 == i2 ? 1e6 : (j2 - j1) / (i2 - i1));
+	b1 = j1 - k1 * i1;
+	k2 = (i3 + di == i3 ? 1e6 : dj / di);
+	b2 = j3 - k2 * i3;
+	x3 = (b2 - b1) / (k1 - k2);
+	y3 = k1 * x3 + b1;
+	return [round(x3), round(y3)];
+}
+
+// 4 points
+function intersect2(i1, j1, i2, j2, i3, j3, i4, j4) {
+	k1 = (i1 == i2 ? 1e6 : (j2 - j1) / (i2 - i1));
+	b1 = j1 - k1 * i1;
+	k2 = (i3 == i4 ? 1e6 : (j4 - j3) / (i4 - i3));
+	b2 = j3 - k2 * i3;
+	i = (b2 - b1) / (k1 - k2);
+	j = k1 * i + b1;
+	return [round(i), round(j)];
+}
+
+// »щем ключевые точки ARTag маркера (хз как, но это работает, эту часть кода писал »нсаф)
+function findPoint(){
+	A = [iA, jA];
+	B = [iB, jB];
+	C = [iC, jC];
+	D = [iD, jD];
+
+	AB = [B[0] - A[0], B[1] - A[1]];
+	BC = [C[0] - B[0], C[1] - B[1]];
+	DC = [C[0] - D[0], C[1] - D[1]];
+	AD = [D[0] - A[0], D[1] - A[1]];
+
+	O = intersect2(A[0], A[1], C[0], C[1], B[0], B[1], D[0], D[1]);
+	
+	E = intersect1(B[0], B[1], C[0], C[1], O[0], O[1], AB[0] + DC[0], AB[1] + DC[1]);
+	K = intersect1(A[0], A[1], D[0], D[1], O[0], O[1], -AB[0] - DC[0], -AB[1] - DC[1]);
+	L = intersect1(C[0], C[1], D[0], D[1], O[0], O[1], AD[0] + BC[0], AD[1] + BC[1]);
+	M = intersect1(A[0], A[1], B[0], B[1], O[0], O[1], -AD[0] - BC[0], -AD[1] - BC[1]);
+	
+	W1 = intersect2(M[0], M[1], E[0], E[1], B[0], B[1], D[0], D[1]);
+	W2 = intersect2(E[0], E[1], L[0], L[1], A[0], A[1], C[0], C[1]);
+	W3 = intersect2(K[0], K[1], L[0], L[1], B[0], B[1], D[0], D[1]);
+	W4 = intersect2(M[0], M[1], K[0], K[1], A[0], A[1], C[0], C[1]);
+	
+	H1 = intersect2(W1[0], W1[1], W2[0], W2[1], K[0], K[1], E[0], E[1]);
+	H2 = intersect2(W2[0], W2[1], W3[0], W3[1], L[0], L[1], M[0], M[1]);
+	H3 = intersect2(W3[0], W3[1], W4[0], W4[1], K[0], K[1], E[0], E[1]);
+	H4 = intersect2(W4[0], W4[1], W1[0], W1[1], L[0], L[1], M[0], M[1]);
+	
+	Z1 = intersect2(O[0], O[1], W1[0], W1[1], H4[0], H4[1], H1[0], H1[1]);
+	Z2 = intersect2(O[0], O[1], W2[0], W2[1], H1[0], H1[1], H2[0], H2[1]);
+	Z3 = intersect2(O[0], O[1], W3[0], W3[1], H2[0], H2[1], H3[0], H3[1]);
+	Z4 = intersect2(O[0], O[1], W4[0], W4[1], H3[0], H3[1], H4[0], H4[1]);
+	
+	T1 = intersect2(H4[0], H4[1], W1[0], W1[1], Z1[0], Z1[1], Z2[0], Z2[1]);
+	T2 = intersect2(W1[0], W1[1], H1[0], H1[1], Z1[0], Z1[1], Z4[0], Z4[1]);	
+	T3 = intersect2(H1[0], H1[1], W2[0], W2[1], Z2[0], Z2[1], Z3[0], Z3[1]);
+	T4 = intersect2(W2[0], W2[1], H2[0], H2[1], Z2[0], Z2[1], Z1[0], Z1[1]);
+	T5 = intersect2(H2[0], H2[1], W3[0], W3[1], Z3[0], Z3[1], Z4[0], Z4[1]);
+	T6 = intersect2(W3[0], W3[1], H3[0], H3[1], Z3[0], Z3[1], Z2[0], Z2[1]);
+	T7 = intersect2(H3[0], H3[1], W4[0], W4[1], Z4[0], Z4[1], Z1[0], Z1[1]);
+	T8 = intersect2(W4[0], W4[1], H4[0], H4[1], Z4[0], Z4[1], Z3[0], Z3[1]);
+	
+	
+	values[0][0] = image[W4[0]][W4[1]];
+	values[0][1] = image[T8[0]][T8[1]];
+	values[0][2] = image[T1[0]][T1[1]];
+	values[0][3] = image[W1[0]][W1[1]];
+	values[1][0] = image[T7[0]][T7[1]];
+	values[1][1] = image[Z4[0]][Z4[1]];
+	values[1][2] = image[Z1[0]][Z1[1]];
+	values[1][3] = image[T2[0]][T2[1]];
+	values[2][0] = image[T6[0]][T6[1]];
+	values[2][1] = image[Z3[0]][Z3[1]];
+	values[2][2] = image[Z2[0]][Z2[1]];
+	values[2][3] = image[T3[0]][T3[1]];
+	values[3][0] = image[W3[0]][W3[1]];
+	values[3][1] = image[T5[0]][T5[1]];
+	values[3][2] = image[T4[0]][T4[1]];
+	values[3][3] = image[W2[0]][W2[1]];
+	
+	image[H1[0]][H1[1]] = 6;
+	image[W1[0]][W1[1]] = 6;
+	image[W2[0]][W2[1]] = 6;
+	image[H4[0]][H4[1]] = 6;
+	image[O[0]][O[1]] = 6;
+	image[H2[0]][H2[1]] = 6;
+	image[W4[0]][W4[1]] = 6;
+	image[H3[0]][H3[1]] = 6;
+	image[W3[0]][W3[1]] = 6;
+	image[T1[0]][T1[1]] = 6;
+	image[T2[0]][T2[1]] = 6;
+	image[T3[0]][T3[1]] = 6;
+	image[T4[0]][T4[1]] = 6;
+	image[T5[0]][T5[1]] = 6;
+	image[T6[0]][T6[1]] = 6;
+	image[T7[0]][T7[1]] = 6;
+	image[T8[0]][T8[1]] = 6;
+	image[Z1[0]][Z1[1]] = 6;
+	image[Z2[0]][Z2[1]] = 6;
+	image[Z3[0]][Z3[1]] = 6;
+	image[Z4[0]][Z4[1]] = 6;
+
+
+}
+
+function rotate_clockwise(times){
+	for (i = 0; i < times; i = i + 1){
+		values_temp = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+		for (j = 0; j < 4; j = j + 1){
+			for (z = 0; z < 4; z = z + 1){
+				values_temp[z][3-j] = values[j][z]
+			}
+		}
+		values = values_temp;
+	}
+}
+
+// ¬озвращает значение ARTag 
+function getARTagValue(raw) {
+	getData(raw);
+	binarization();
+	//printImage();
+	getCorners();
+	findPoint();
+	//printImage();
+	X = -1; Y = -1; NUM = -1;
+	if (values[0][0] == 0 && values[0][3] == 1 && values[3][3] == 1 && values[3][0] == 1){
+		rotate_clockwise(2);
+	}
+	else if (values[0][3] == 0 && values[0][0] == 1 && values[3][3] == 1 && values[3][0] == 1){
+		rotate_clockwise(1);
+	}
+	else if (values[3][3] == 0 && values[0][3] == 1 && values[0][0] == 1 && values[3][0] == 1){
+	}
+	else if (values[3][0] == 0 && values[0][3] == 1 && values[3][3] == 1 && values[0][0] == 1){
+		rotate_clockwise(3)
+	}
+	else{
+		print("Error: Incorrect ARTag\n");
+		return [X, Y, NUM];
+	}
+	X = values[1][3] * 4 + values[2][0] * 2 + values[2][2];
+	Y = values[2][3] * 4 + values[3][1] * 2 + values[3][2];
+	NUM = values[1][0] * 2 + values[1][2];
+	string = "" + X + " " + Y + " " + NUM;
+	
+	// brick.display().addLabel(string,10,10);	
+	return [X, Y, NUM];
 }
