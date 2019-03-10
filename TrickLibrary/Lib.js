@@ -69,7 +69,7 @@ var irLeftSensor = brick.sensor(A2);//????????????
 
 
 // Cell's parameters
-var cellLength = 52.5 * cpr / (pi * d);
+//var cellLength = 52.5 * cpr / (pi * d);
 var length = 40;
 
 //Gyroscope settings
@@ -1295,7 +1295,7 @@ movementlib.correctiondelay = 5
 movementlib.sensorscorrectiondelay = 50
 //movementlib.correctionthreshold = length / 1.5; //for real
 
-movementlib.correctionthreshold = length / 2; //for sim
+movementlib.correctionthreshold = length / 2.4; //for sim
 movementlib.updatedelay = 5
 
 //Local variables (don't TOUCH111)
@@ -1651,7 +1651,7 @@ movementlib.move_doublecorrection = function(speed, distance, kp, kd, ki, sLeft,
 	lvar.initT = odometriya.teta;
 	lvar.perror = 0;
 	lvar.integral = 0;
-	while ((distance == 0 && (sFront.read() + sensorOffsetFront > length / 2.35)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
+	while ((distance == 0 && (sFront.read() + sensorOffsetFront > length / 2)) || (distance > 0 && odometriya.distance - lvar.initialDistance < distance)) {
 		if (movementlib.flStop) break;
 		if (sFront != undefined && sFront.read() + sensorOffsetFront < length / 2) break;
 		lvar.dt =  movementlib.sensorscorrectiondelay / 1000;
@@ -1691,7 +1691,7 @@ movementlib.move_doublecorrection = function(speed, distance, kp, kd, ki, sLeft,
 			//print("SENSORS!");
 			lvar.error = lvar.wallDistance - length / 2;
 		}
-		//print(lvar.error);
+		print(lvar.error);
 		lvar.integral = lvar.integral + lvar.error * lvar.dt;
 		lvar.derative = (lvar.error - lvar.perror) / lvar.dt;
 		lvar.correction = lvar.error * kp + lvar.derative * kd + lvar.integral * ki;
@@ -2270,15 +2270,15 @@ var rot2teta = function(startRot) {
 
 var scantag = function(ang) {
 	var artag_obj = new artag();
-	var code = getARTagValue(getData());
+	var code = getARTagValue();
 	var i = 0;
 	while(code[0] == -1)
 	{
-		code = getARTagValue(getData());
+		code = getARTagValue();
 		if (ang > 0)
-			movementlib.rotate_encoderssmooth(5, -pi / 80);
+			movementlib.rotate_encoderssmooth(7, -pi / 100);
 		else
-			movementlib.rotate_encoderssmooth(5, pi / 80);
+			movementlib.rotate_encoderssmooth(7, pi / 100);
 		script.wait(10);
 		i++;
 	}
@@ -2643,7 +2643,78 @@ function getARTagValue(raw) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 var main = function() {
+	odometriya.Start();
+	movementlib.start();
+	//var code = scantag(1);
+	//print(code);
+	//return;
+	var pos = localreal();
+	
+	display.print(pos.toString());
+	print(pos);
+	script.wait(4000);
+	movementlib.move_correction(-10, length / 8, 6, 3, 0);
 
    	trikTaxi.walls = ["3, 11", "10, 11", "15, 23", "18, 19", "16, 24", "26, 27", "27, 35", "39, 47", "40, 48", "53, 61"]
 	var maze = [1, 1, 1, 1, 1, 1, 0, 1,
@@ -2660,9 +2731,6 @@ var main = function() {
 	//var inputPos = input.split("\n")[0];
 	//print(inputPos);
 	//var arraw = input.split("\n")[1].substr(1);
-
-	odometriya.Start();
-	movementlib.start();
 	
 	//1 0 1
 	//2 1 3
@@ -2670,12 +2738,12 @@ var main = function() {
 	//
 	//
 	//
-	var x = 2;
-	var y = 7;
+	var x = pos[0];
+	var y = pos[1];
 	var endx = 7;
-	var endy = 0;
-	var rot = 3;
-	var arrot = 2;
+	var endy = 2;
+	var rot = pos[2];
+	var arrot = 3;
 	
 	var cell0 = x + y * 8;
 	var cell1 = endx + endy * 8;
@@ -2683,9 +2751,8 @@ var main = function() {
 
 	odometriya.teta = startTeta;
 	var path = trikTaxi.magicbfs(cell0, cell1, maze, 8, 8, startTeta / (2 * pi));
-	movementlib.move_pathcorrection(70, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1, 0.55, 0);
-	
-	return;
+	movementlib.move_pathcorrection(45, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1.2, 0.7, 0);
+	movementlib.move_encoders(-10, 5);
 	
 	var delta_angle = rot2teta(arrot) - odometriya.teta;
 	if (delta_angle > pi)
@@ -2693,17 +2760,470 @@ var main = function() {
 	else if (delta_angle < -pi)
 		delta_angle = 2 * pi + delta_angle;
 	movementlib.rotate_encoderssmooth(30, delta_angle);
-	movementlib.move_encoders(-10, 8);
+	//movementlib.move_encoders(-10, 4);
 	if (delta_angle > 0)
-		movementlib.rotate_encoderssmooth(30, - pi / 2 * 0.8);
+		//movementlib.rotate_absolute(20, rot2teta(arrot));
+		movementlib.rotate_encoderssmooth(30, - pi / 2 * 0.85);
 	else {
-		movementlib.rotate_encoderssmooth(30, pi / 2 * 0.8);
-		print("fdfd");
+		//movementlib.rotate_absolute(20, rot2teta(arrot));
+		movementlib.rotate_encoderssmooth(30, pi / 2 * 0.85);
 	}
 	
 	var code = scantag(delta_angle);
 	display.print("(" + code[0] + "," + code[1] + ")" + code[2]);
 	brick.playSound("Beep.wav");
-	while (true)
-		script.wait(100);
+	script.wait(5000);
+	
+	print("Finish: " + code);
+	//Send data to the main one
+	//mailbox.send(0, code);
+	
+	odometriya.teta = rot2teta(arrot);
+	
+	x = endx;
+	y = endy;
+	rot = arrot;
+	endx = code[0];
+	endy = code[1];
+	
+	cell0 = x + y * 8;
+	cell1 = endx + endy * 8;
+	startTeta = rot2teta(rot);
+	
+	odometriya.teta = rot2teta(rot) - pi / 2;
+	print("DEBUGG: " + odometriya.teta);
+	path = trikTaxi.astar(cell0, cell1, maze, 8, 8);
+	movementlib.move_pathcorrection(45, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1.5, 0.85, 0);
+	display.print("finish");
+	script.wait(3000);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var localreal = function() {
+	pi = 3.141592653589793;
+	wait = script.wait;
+	sign = function(n) { return n > 0 ? 1 : n = 0 ? 0 : -1; }
+	sqr = function(n) { return n * n; }
+	sqrt = Math.sqrt;
+	min = function(a, b) { return a < b ? a : b; }
+	max = function(a, b) { return a > b ? a : b; }
+	abs = Math.abs;
+	sin = Math.sin;
+	cos = Math.cos;
+	round = Math.round;
+
+	// ��������� ������
+	d = 8.4 // ������� ������, ��
+	w = 19.5 // ����, ��
+	cpr = 380 // ��������� �������� �� ������
+	x = 0 // ��������� ���������� ������
+	y = 0
+	a = 0 // ��������� ���� ������
+	var n = 0;
+
+	////////////////////////////////
+	v = 45;//�������� ��������
+	// ����� ������ 
+	var cellLength = 0;
+
+	//���������� ���� �������� ����� � ���������� ���� 90, ����� ������ �� ��������
+	degree_left = 0;
+	degree_right = 0;
+
+	//���������� �������� ��������, �� ������ �� ��������, ������� �� ��������� (������ target ������ �������)
+	target = 0
+
+	//����� ��� ��������� ����� �� ��������, ��������� �������� ������� ����� ���������� �� ������ ������ ����������� �������� ������
+	stop_turn = 0;
+	stop_forward = 0;
+
+	KOEF_FORWARD = 0
+
+	var cellLength = (cpr / (pi * d) * length);
+
+	if (mailbox.myHullNumber() == 2){ 
+		var cellLength = (cpr / (pi * d) * length);
+		degree_left = 85;
+		degree_right = -85.5;
+		target = 200;
+		stop_turn = 1;
+		stop_forward = 1;
+		KOEF_FORWARD = 5;
+	}
+
+
+	// adj[i][j] �������� ����� �������, ������� ��������� �� ����������� 0 <= j <= 3 �� i-�� �������
+	// ��� -1 ���� ������ ���
+	// ����� ������� pos � ������������ x, y:
+	// pos = x + y*8
+	var adj = [[-1, 1, 8, -1], [-1, 2, -1, 0], [-1, 3, 10, 1], [-1, 4, -1, 2], [-1, 5, -1, 3], [-1, -1, 13, 4], [-1, -1, -1, -1], [-1, -1, 15, -1], [0, -1, 16, -1], [-1, -1, -1, -1], [2, -1, 18, -1], [-1, -1, 19, -1], [-1, -1, -1, -1], [5, 14, 21, -1], [-1, 15, -1, 13], [7, -1, -1, 14], [8, 17, -1, -1], [-1, 18, -1, 16], [10, -1, 26, 17], [11, 20, 27, -1], [-1, 21, -1, 19], [13, -1, 29, 20], [-1, -1, -1, -1], [-1, -1, 31, -1], [-1, -1, 32, -1], [-1, -1, -1, -1], [18, -1, 34, -1], [19, -1, -1, -1], [-1, -1, -1, -1], [21, 30, 37, -1], [-1, 31, -1, 29], [23, -1, 39, 30], [24, 33, 40, -1], [-1, 34, -1, 32], [26, 35, 42, 33], [-1, 36, -1, 34], [-1, 37, 44, 35], [29, -1, 45, 36], [-1, -1, -1, -1], [31, -1, -1, -1], [32, -1, -1, -1], [-1, -1, -1, -1], [34, -1, 50, -1], [-1, -1, -1, -1], [36, 45, -1, -1], [37, 46, 53, 44], [-1, 47, -1, 45], [-1, -1, 55, 46], [-1, 49, 56, -1], [-1, 50, -1, 48], [42, 51, 58, 49], [-1, -1, 59, 50], [-1, -1, -1, -1], [45, -1, -1, -1], [-1, -1, -1, -1], [47, -1, 63, -1], [48, -1, -1, -1], [-1, -1, -1, -1], [50, 59, -1, -1], [51, 60, -1, 58], [-1, 61, -1, 59], [-1, 62, -1, 60], [-1, 63, -1, 61], [55, -1, -1, 62]];
+
+	// �������� ������� (������ ��������� ���� [pos, dir])
+	var states = [];
+
+	// ����������������� �������
+	var robot1_pos = 0;
+	var robot1_dir = 0;
+
+
+	// ������������� ������� �� ����� ���������� ������� �������
+	function init_states() {
+		states = [];
+		for (var robot_pos = 0; robot_pos < adj.length; robot_pos++)
+			for (var robot_dir = 0; robot_dir < 4; robot_dir++)
+				states.push([robot_pos, robot_dir]);
+	}
+
+	// �������� ����������������� ������
+	// action - ���� �� �������� ["F" (forward), "L" (turn left), "R" (turn right)]
+	function update_positions(action) {
+		for (var state = states.length - 1; state >= 0; state--) {
+			var is_ok = true;
+			
+			var robot_pos = states[state][0];
+			var robot_dir = states[state][1];
+			
+			if (action == "F")
+				robot_pos = adj[robot_pos][robot_dir];
+			else if (action == "L")
+				robot_dir = (robot_dir + 3) % 4;
+			else if (action == "R")
+				robot_dir = (robot_dir + 1) % 4;
+				
+			if (robot_pos == -1) {
+				states.splice(state, 1);
+			} else {
+				states[state][0] = robot_pos;
+				states[state][1] = robot_dir;
+			}
+		}
+		print("**")
+		print(states)
+	}
+
+	// ���������� ��������� ������� �������
+	function update_states() {
+		// ��������� � ��������
+		var on_front = is_free_on_front();
+		var on_left = is_free_on_left();
+		var on_right = is_free_on_right();
+		for (var state = states.length - 1; state >= 0; state--) {
+			var is_ok = true;
+			
+			robot_pos = states[state][0];
+			robot_dir = states[state][1];
+			
+			// �������� ������� ������/�����/������� �� ������
+			
+			var pos = adj[robot_pos][robot_dir];
+			is_ok = is_ok && (on_front == (pos != -1));
+			
+			pos = adj[robot_pos][(robot_dir + 3) % 4];
+			is_ok = is_ok && (on_left  == (pos != -1));
+			
+			pos = adj[robot_pos][(robot_dir + 1) % 4];
+			is_ok = is_ok && (on_right == (pos != -1));
+			
+			if (!is_ok) 
+				states.splice(state, 1);
+		}
+		print("*")
+		print(states)
+	}
+
+	// ����������� �������, 
+	// ���������� true/false (������� �� ��������������)
+	function localization() {
+		// TODO: �������� �������� ���� �����
+		init_states();
+		//print(states)
+		update_states();
+		
+		// �������� �� ������� ������ ����
+		while (states.length > 1) {
+
+			if (is_free_on_right()) {
+				turn_right();
+				update_positions("R");
+				update_states();
+				forward();
+				update_positions("F");
+			} else if (is_free_on_front()) {
+				forward();
+				update_positions("F");
+			} else {
+				turn_left();
+				update_positions("L");
+			}
+			update_states();
+		}
+		
+		if (states.length == 1) {
+			robot1_pos = states[0][0];
+			robot1_dir = states[0][1];
+			return true;
+		} else
+			return false;
+	}
+
+	iRight = brick.sensor(A1)
+	iLeft = brick.sensor(A2)
+	iForward = brick.sensor(D1)
+	enc_l = brick.encoder("E1")
+	enc_r = brick.encoder("E2")
+	motor_l = brick.motor("M1").setPower
+	motor_r = brick.motor("M2").setPower
+
+	rotCnt = 0;
+
+
+
+	// �������� �� ����� �� ������
+	function is_free_on_left() {
+		return (iLeft.read() > 40)
+	}
+
+	// �������� �� ������ �� ������
+	function is_free_on_right() {
+		return (iRight.read() > 40)
+	}
+
+	// �������� �� ������� �� ������
+	function is_free_on_front() {
+		return (iForward.read() > 40)
+	}
+
+	fullRot = 0;
+
+	function forward(robot) {
+		moveForward();
+	}
+
+	// ������� ������� ��� ������ � ������� robot
+	function turn_right(robot) {
+		turnRight();
+		rotCnt += 1;
+	}
+
+	// ������� ������ ��� ������ � ������� robot
+	function turn_left(robot) {
+		turnLeft();	
+		rotCnt -= 1;
+	}
+
+	//.......................................................................................................................
+	// ��������
+	eLeft = brick.encoder(E2);
+	eRight = brick.encoder(E1);
+
+	// ������
+	mLeft = brick.motor(M2).setPower;
+	mRight = brick.motor(M1).setPower;
+
+	var readGyro = brick.gyroscope().read
+	function readYaw() { return  -readGyro()[6]; }
+
+	var direction = 0; // absolute angle of direction movement
+	var directionOld = 0;
+	var azimut = 0; // we should go on azimut or turn to it
+	print("-------------------------------------------");
+
+	eLeft.reset();
+	eRight.reset();
+
+	var el = eLeft.readRawData();
+	var er = eRight.readRawData();
+	mLeft(0);
+	mRight(0);
+
+	//������������� � ���������� ���������
+	//brick.gyroscope().calibrate(5000);
+	//script.wait(5000);
+	//values = brick.gyroscope().getCalibrationValues();
+	//print(values);
+
+
+	function angle()
+	{
+		var sgn = 0;
+		var _direction = readYaw(); // mgrad
+		var dtDirection= _direction - directionOld;
+
+		sgn = directionOld == 0 ? 0 : directionOld/Math.abs(directionOld);
+		n += sgn*Math.floor(Math.abs(dtDirection/320000));
+		direction = _direction + n * 360000;
+		directionOld = _direction;
+	}
+
+
+	// ������ ���������� �������� ��������� � �������� 200��, ����� ��������� ���������� ���� � ���������
+	var mtimer = script.timer(50);
+	mtimer.timeout.connect(angle); 
+
+	//������� �� ���� �� ��������� _angle - ������������� ���� �� ������� ���������� �����������
+	function turnDirection(_angle, _v){
+		_angle = azimut + _angle;
+		azimut = _angle;	
+		_angle = _angle * 1000; //toMGrad
+		
+		eLeft.reset();
+		eRight.reset();
+		
+		_speed =65;
+		var angleOfRotate = - _angle + direction;
+		var sgn =  angleOfRotate == 0 ? 0 : angleOfRotate/Math.abs(angleOfRotate);
+		mLeft(-_speed * sgn);
+		mRight(_speed * sgn);
+		eLeftOld = eLeft.read();
+		eRightOld = eRight.read();
+		
+		while (abs(eRight.read() - eLeft.read())/2 < target){
+			eLeftCur = eLeft.read();
+			eRightCur = eRight.read();
+			if (eLeftCur == eLeftOld && eRightCur == eRightOld){
+				_speed+=3;
+				mLeft(-_speed * sgn);
+				mRight(_speed * sgn);
+			}
+			eLeftOld = eLeftCur;
+			eRightOld = eRightCur;
+			script.wait(20);
+		}
+		
+		
+		mLeft(stop_turn * sgn)
+		mRight(-stop_turn * sgn)
+		script.wait(1);
+		stop();
+		script.wait(150);
+	}
+
+	// ������ � ����� �� ���������� ����� _kceel �� ��������� _v ������������ �� ��������� �� ���� azimut
+	function real_forward( _v, _kcell)
+	{
+		_alpha = azimut;
+		var _vel = _v == undefined ? 50 : _v;
+		var u = 0;
+		eLeft.reset();
+		eRight.reset();
+		var el = Math.abs(eLeft.readRawData());
+		while(Math.abs(eLeft.readRawData()) < (el + (_kcell * cellLength))){
+			e = _alpha-direction/1000;
+			print(e);
+			u = KOEF_FORWARD*e;
+			mLeft(_vel + u);
+			mRight(_vel - u);
+			print(readGyro()[6])
+			
+			script.wait(50);
+		}
+		
+		mLeft(-stop_forward);
+		mRight(-stop_forward);
+		script.wait(1);
+		stop();
+		script.wait(200);
+	}
+
+
+	// ������� ������
+	function turnLeft(){
+		//turnDirection(degree_left, v);
+		movementlib.rotate_encoderssmooth(v, pi / 2);
+	}
+
+	// ������� ��
+	function turnRight(){
+		//turnDirection(degree_right,v);
+		movementlib.rotate_encoderssmooth(v, -pi / 2);
+	}
+	// �������� ������ �� ���� ������
+	function moveForward() {
+		//real_forward(v, 1);
+		//movementlib.move_encoders(v, length);
+		movementlib.move_doublecorrection(v, length, 1.2, 0.85, 0, iLeft, iRight, iForward);
+	}
+
+
+	function stop(){ //���� �������
+		motor_r(0)
+		motor_l(0)
+		movementlib.stop();
+		script.wait(50)
+		movementlib.unfreeze();
+	}
+
+	var main = function() {
+
+		while (!localization())
+			script.wait(100);
+		x = robot1_pos % 8
+		y = parseInt(robot1_pos / 8,10)
+		return [x,y,robot1_dir];
+		
+	}
+	return main();
 }
