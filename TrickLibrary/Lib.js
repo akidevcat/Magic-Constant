@@ -2275,10 +2275,13 @@ var scantag = function(ang) {
 	while(code[0] == -1)
 	{
 		code = getARTagValue();
+		/*
 		if (ang > 0)
 			movementlib.rotate_encoderssmooth(7, -pi / 100);
 		else
 			movementlib.rotate_encoderssmooth(7, pi / 100);
+		*/
+		movementlib.rotate_encoderssmooth(7, -pi / 100);
 		script.wait(10);
 		i++;
 	}
@@ -2697,21 +2700,38 @@ function getARTagValue(raw) {
 
 
 
+var rx1 = 0;
+var ry1 = 0;
+var rr1 = 0;
+var rx2 = 0;
+var ry2 = 0;
+var rr2 = 0;
+var rx3 = 0;
+var ry3 = 0;
+var rr3 = 0;
+
+var arx1 = 0;
+var ary1 = 0;
+var arx2 = 0;
+var ary2 = 0;
+var arx3 = 0;
+var ary3 = 0;
 
 
-
-
-
-
-var main = function() {
-	odometriya.Start();
-	movementlib.start();
-	//var code = scantag(1);
-	//print(code);
-	//return;
+var program1 = function() {
+	var msg = mailbox.receive();
+	display.print("(" + rx1 + ";" + ry1 + ")");
+}
+var program2 = function () {
+	var msg = mailbox.receive();
+	display.print("(" + rx2 + ";" + ry2 + ")");
+}
+var program3 = function () {
 	var pos = localreal();
 	
-	display.print(pos.toString());
+	display.print("(" + pos[0] + ";" + pos[1] + ")");
+	mailbox.send(1, "show");
+	mailbox.send(2, "show");
 	print(pos);
 	script.wait(4000);
 	movementlib.move_correction(-10, length / 8, 6, 3, 0);
@@ -2726,22 +2746,11 @@ var main = function() {
 		    1, 1, 1, 1, 0, 1, 0, 1,
 		    1, 0, 1, 1, 1, 1, 1, 1]
 	script.wait(100);
-
-	//var input = script.readAll("input.txt").toString();
-	//var inputPos = input.split("\n")[0];
-	//print(inputPos);
-	//var arraw = input.split("\n")[1].substr(1);
 	
-	//1 0 1
-	//2 1 3
-	//
-	//
-	//
-	//
 	var x = pos[0];
 	var y = pos[1];
-	var endx = 7;
-	var endy = 2;
+	var endx = 2;
+	var endy = 1;
 	var rot = pos[2];
 	var arrot = 3;
 	
@@ -2752,7 +2761,7 @@ var main = function() {
 	odometriya.teta = startTeta;
 	var path = trikTaxi.magicbfs(cell0, cell1, maze, 8, 8, startTeta / (2 * pi));
 	movementlib.move_pathcorrection(45, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1.2, 0.7, 0);
-	movementlib.move_encoders(-10, 5);
+	movementlib.move_correction(-10, 5, 8, 4, 0);
 	
 	var delta_angle = rot2teta(arrot) - odometriya.teta;
 	if (delta_angle > pi)
@@ -2760,7 +2769,11 @@ var main = function() {
 	else if (delta_angle < -pi)
 		delta_angle = 2 * pi + delta_angle;
 	movementlib.rotate_encoderssmooth(30, delta_angle);
-	//movementlib.move_encoders(-10, 4);
+	movementlib.move_correction(-5, 15, 8, 4, 0);
+	movementlib.move_correction(5, 5, 8, 4, 0);
+	//movementlib.rotate_encoderssmooth(30, delta_angle * 0.85);
+	
+	/*
 	if (delta_angle > 0)
 		//movementlib.rotate_absolute(20, rot2teta(arrot));
 		movementlib.rotate_encoderssmooth(30, - pi / 2 * 0.85);
@@ -2768,11 +2781,14 @@ var main = function() {
 		//movementlib.rotate_absolute(20, rot2teta(arrot));
 		movementlib.rotate_encoderssmooth(30, pi / 2 * 0.85);
 	}
+	*/
+	movementlib.rotate_encoderssmooth(30, - pi / 2 * 0.8);
+	
 	
 	var code = scantag(delta_angle);
-	display.print("(" + code[0] + "," + code[1] + ")" + code[2]);
+	display.print(code[2] + "(" + code[0] + "," + code[1] + ")");
 	brick.playSound("Beep.wav");
-	script.wait(5000);
+	script.wait(10000);
 	
 	print("Finish: " + code);
 	//Send data to the main one
@@ -2793,9 +2809,29 @@ var main = function() {
 	odometriya.teta = rot2teta(rot) - pi / 2;
 	print("DEBUGG: " + odometriya.teta);
 	path = trikTaxi.astar(cell0, cell1, maze, 8, 8);
-	movementlib.move_pathcorrection(45, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1.5, 0.85, 0);
+	movementlib.move_pathcorrection(45, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1.2, 0.7, 0);
 	display.print("finish");
 	script.wait(3000);
+}
+
+
+var main = function() {
+	odometriya.Start();
+	movementlib.start();
+	//var code = scantag(1);
+	//print(code);
+	//return;
+	switch (mailbox.myHullNumber()) {
+		case 0:
+			program1();
+			break;
+		case 1:
+			program2();
+			break;
+		case 2:
+			program3();
+			break;
+	}
 }
 
 
@@ -3204,7 +3240,7 @@ var localreal = function() {
 	function moveForward() {
 		//real_forward(v, 1);
 		//movementlib.move_encoders(v, length);
-		movementlib.move_doublecorrection(v, length, 1.2, 0.85, 0, iLeft, iRight, iForward);
+		movementlib.move_doublecorrection(v, length, 1.4, 0.5, 0, iLeft, iRight, iForward);
 	}
 
 
