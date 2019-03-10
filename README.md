@@ -1,2 +1,2 @@
 # Magic-Constant
-The ancient magic and 'kostyly' both are here.
+The ancient magic and 'kostyly' both is here.
