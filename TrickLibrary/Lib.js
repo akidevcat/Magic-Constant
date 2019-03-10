@@ -19,8 +19,8 @@ controllers[0].cprl = 380;
 controllers[0].cprr = 380;
 controllers[1].cprl = 377;
 controllers[1].cprr = 377;
-controllers[2].cprl = 394;
-controllers[2].cprr = 394; 
+controllers[2].cprl = 380;
+controllers[2].cprr = 380; 
 /*
 Status:
 0 - finished
@@ -44,7 +44,7 @@ var mLeft = brick.motor(M2).setPower; // Default left motor in 2D simulator
 var mRight = brick.motor(M1).setPower; // Default right motor in 2D simulator
 var mLeftGet = brick.motor(M2).power; // Default left motor in 2D simulator
 var mRightGet = brick.motor(M1).power; // Default right motor in 2D simulator
-var cpr = 377; // Encoder's count per round of wheel //350
+var cpr = 380; // Encoder's count per round of wheel //350
 var cpr0 = 392;
 var cprToDeg = 360/cpr;
 var kp2 = 1.1;
