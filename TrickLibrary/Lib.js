@@ -6,13 +6,19 @@ controllers[2].name = "trik-67ae70"
 controllers[0].ip = "192.168.77.1"
 controllers[1].ip = "192.168.77.204"
 controllers[2].ip = "192.168.77.221"
+controllers[0].kp = 1.25;
+controllers[0].kd = 0.85;
+controllers[0].ki = 0;
+controllers[1].kp = 1.1;
+controllers[1].kd = 0.55;
+controllers[1].ki = 0;
 controllers[2].kp = 1.1;
 controllers[2].kd = 0.5;
 controllers[2].ki = 0;
-controllers[0].cprl = 392;
-controllers[0].cprr = 392;
-controllers[1].cprl = 366;
-controllers[1].cprr = 326;
+controllers[0].cprl = 380;
+controllers[0].cprr = 380;
+controllers[1].cprl = 377;
+controllers[1].cprr = 377;
 controllers[2].cprl = 394;
 controllers[2].cprr = 394; 
 /*
@@ -38,7 +44,7 @@ var mLeft = brick.motor(M2).setPower; // Default left motor in 2D simulator
 var mRight = brick.motor(M1).setPower; // Default right motor in 2D simulator
 var mLeftGet = brick.motor(M2).power; // Default left motor in 2D simulator
 var mRightGet = brick.motor(M1).power; // Default right motor in 2D simulator
-var cpr = 392; // Encoder's count per round of wheel //350
+var cpr = 377; // Encoder's count per round of wheel //350
 var cpr0 = 392;
 var cprToDeg = 360/cpr;
 var kp2 = 1.1;
@@ -1392,10 +1398,22 @@ movementlib.rotate_encoderssmooth = function(speed, angle) {
 	if (angle == 0) {
 		return;
 	}
+	if(mailbox.myHullNumber() == 1)
+	{
+		angle *= 0.925;
+	}
 	lvar.initialAngle = odometriya.teta;
 	if (angle > 0) {
-		lvar.initLeft = -speed;
-		lvar.initRight = speed;
+		if(mailbox.myHullNumber() == 1)
+		{
+			lvar.initLeft = -speed;
+			lvar.initRight = speed * 1.075;
+		}
+		else
+		{
+			lvar.initLeft = -speed;
+			lvar.initRight = speed;
+		}
 		//movementlib.mleft(-speed);
 		//movementlib.mright(speed);
 		//mLeft(-speed)
@@ -1403,8 +1421,17 @@ movementlib.rotate_encoderssmooth = function(speed, angle) {
 	} else {
 		//mLeft(speed);
 		//mRight(-speed);
-		lvar.initLeft = speed;
-		lvar.initRight = -speed;
+		if(mailbox.myHullNumber() == 1)
+		{
+			lvar.initLeft = speed * 1.6; 
+			lvar.initRight = -speed * 1.4;
+		}
+		else
+		{
+			lvar.initLeft = speed; 
+			lvar.initRight = -speed;
+		}
+			
 		//movementlib.mleft(speed);
 		//movementlib.mright(-speed);
 	}
@@ -1413,10 +1440,12 @@ movementlib.rotate_encoderssmooth = function(speed, angle) {
 		if ((angle > 0 && (odometriya.teta - lvar.initialAngle) >= angle) || 
 			(angle < 0 && (odometriya.teta - lvar.initialAngle) <= angle)) { break; }
 		if (movementlib.flStop) break;
+		
 		var progress = (odometriya.teta - lvar.initialAngle) / angle; //0 - 1
 		var progressD = Math.min(progress, 1 - progress) * 1.7;
 		var velPower = Math.max(progressD, 0.3);
 		//print(velPower);
+		
 		movementlib.mleftforce(lvar.initLeft * velPower);
 		movementlib.mrightforce(lvar.initRight * velPower);
 		script.wait(1);
@@ -2256,71 +2285,6 @@ var scantag = function(ang) {
 	return code;
 }
 
-var main = function() {
-
-   	trikTaxi.walls = ["3, 11", "10, 11", "15, 23", "18, 19", "16, 24", "26, 27", "27, 35", "39, 47", "40, 48", "53, 61"]
-	var maze = [1, 1, 1, 1, 1, 1, 0, 1,
-		    1, 0, 1, 1, 0, 1, 1, 1,
-		    1, 1, 1, 1, 1, 1, 0, 1,
-		    1, 0, 1, 1, 0, 1, 1, 1,
-		    1, 1, 1, 1, 1, 1, 0, 1,
-		    1, 0, 1, 0, 1, 1, 1, 1,
-		    1, 1, 1, 1, 0, 1, 0, 1,
-		    1, 0, 1, 1, 1, 1, 1, 1]
-	script.wait(100);
-
-	//var input = script.readAll("input.txt").toString();
-	//var inputPos = input.split("\n")[0];
-	//print(inputPos);
-	//var arraw = input.split("\n")[1].substr(1);
-
-	odometriya.Start();
-	movementlib.start();
-	
-	//1 0 1
-	//2 1 3
-	//
-	//
-	//
-	//
-	var x = 7;
-	var y = 7;
-	var endx = 0;
-	var endy = 0;
-	var rot = 0;
-	var arrot = 2;
-	
-	var cell0 = x + y * 8;
-	var cell1 = endx + endy * 8;
-	var startTeta = rot2teta(rot);
-
-	odometriya.teta = startTeta;
-	var path = trikTaxi.magicbfs(cell0, cell1, maze, 8, 8, startTeta / (2 * pi));
-	movementlib.move_pathcorrection(70, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1, 0.85, 0);
-	
-	return;
-	
-	var delta_angle = rot2teta(arrot) - odometriya.teta;
-	if (delta_angle > pi)
-		delta_angle = delta_angle - 2 * pi;
-	else if (delta_angle < -pi)
-		delta_angle = 2 * pi + delta_angle;
-	movementlib.rotate_encoderssmooth(30, delta_angle);
-	movementlib.move_encoders(-10, 8);
-	if (delta_angle > 0)
-		movementlib.rotate_encoderssmooth(30, - pi / 2 * 0.8);
-	else {
-		movementlib.rotate_encoderssmooth(30, pi / 2 * 0.8);
-		print("fdfd");
-	}
-	
-	var code = scantag(delta_angle);
-	display.print("(" + code[0] + "," + code[1] + ")" + code[2]);
-	brick.playSound("Beep.wav");
-	while (true)
-		script.wait(100);
-}
-
 // –?????? ??????????€
 height = 120, width = 160;
 
@@ -2675,4 +2639,71 @@ function getARTagValue(raw) {
 	
 	// brick.display().addLabel(string,10,10);	
 	return [X, Y, NUM];
+}
+
+
+
+var main = function() {
+
+   	trikTaxi.walls = ["3, 11", "10, 11", "15, 23", "18, 19", "16, 24", "26, 27", "27, 35", "39, 47", "40, 48", "53, 61"]
+	var maze = [1, 1, 1, 1, 1, 1, 0, 1,
+		    1, 0, 1, 1, 0, 1, 1, 1,
+		    1, 1, 1, 1, 1, 1, 0, 1,
+		    1, 0, 1, 1, 0, 1, 1, 1,
+		    1, 1, 1, 1, 1, 1, 0, 1,
+		    1, 0, 1, 0, 1, 1, 1, 1,
+		    1, 1, 1, 1, 0, 1, 0, 1,
+		    1, 0, 1, 1, 1, 1, 1, 1]
+	script.wait(100);
+
+	//var input = script.readAll("input.txt").toString();
+	//var inputPos = input.split("\n")[0];
+	//print(inputPos);
+	//var arraw = input.split("\n")[1].substr(1);
+
+	odometriya.Start();
+	movementlib.start();
+	
+	//1 0 1
+	//2 1 3
+	//
+	//
+	//
+	//
+	var x = 2;
+	var y = 7;
+	var endx = 7;
+	var endy = 0;
+	var rot = 3;
+	var arrot = 2;
+	
+	var cell0 = x + y * 8;
+	var cell1 = endx + endy * 8;
+	var startTeta = rot2teta(rot);
+
+	odometriya.teta = startTeta;
+	var path = trikTaxi.magicbfs(cell0, cell1, maze, 8, 8, startTeta / (2 * pi));
+	movementlib.move_pathcorrection(70, path, 8, 8, irLeftSensor, irRightSensor, uzFrontSensor, 1, 0.55, 0);
+	
+	return;
+	
+	var delta_angle = rot2teta(arrot) - odometriya.teta;
+	if (delta_angle > pi)
+		delta_angle = delta_angle - 2 * pi;
+	else if (delta_angle < -pi)
+		delta_angle = 2 * pi + delta_angle;
+	movementlib.rotate_encoderssmooth(30, delta_angle);
+	movementlib.move_encoders(-10, 8);
+	if (delta_angle > 0)
+		movementlib.rotate_encoderssmooth(30, - pi / 2 * 0.8);
+	else {
+		movementlib.rotate_encoderssmooth(30, pi / 2 * 0.8);
+		print("fdfd");
+	}
+	
+	var code = scantag(delta_angle);
+	display.print("(" + code[0] + "," + code[1] + ")" + code[2]);
+	brick.playSound("Beep.wav");
+	while (true)
+		script.wait(100);
 }
