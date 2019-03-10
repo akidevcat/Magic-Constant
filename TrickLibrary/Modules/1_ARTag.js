@@ -193,10 +193,13 @@ var artag = function()
 		{
 			case 'r':
 				getter = get_r;
+				break;
 			case 'g':
 				getter = get_g;
+				break;
 			case 'b':
 				getter = get_b;
+				break;
 		}
 		
 		for(var h = h_mid - 1; h <= h_mid + 1; ++h)
